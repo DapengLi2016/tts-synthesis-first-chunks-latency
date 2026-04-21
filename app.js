@@ -38,12 +38,12 @@ async function loadVoices() {
     const subscriptionKey = subscriptionKeyInput.value.trim();
 
     if (!region || !subscriptionKey) {
-        log('Please enter region and subscription key', 'error');
+        log('Please select region and enter subscription key', 'error');
         return;
     }
 
     try {
-        log('Loading voices using Speech SDK...', 'info');
+        log(`Loading voices from ${region}...`, 'info');
         loadVoicesBtn.disabled = true;
 
         // Use Speech SDK to get voices (avoids CORS issues)
@@ -56,10 +56,11 @@ async function loadVoices() {
                 
                 if (result.reason === SpeechSDK.ResultReason.VoicesListRetrieved) {
                     allVoices = result.voices;
-                    log(`Loaded ${allVoices.length} voices`, 'success');
+                    log(`✓ Loaded ${allVoices.length} voices`, 'success');
 
                     // Extract unique languages
                     const languages = [...new Set(allVoices.map(v => v.locale))].sort();
+                    log(`✓ Found ${languages.length} languages`, 'info');
                     
                     languageSelect.innerHTML = '<option value="">Select a language</option>';
                     languages.forEach(lang => {
@@ -69,20 +70,27 @@ async function loadVoices() {
                         languageSelect.appendChild(option);
                     });
 
-                    log('Voices loaded successfully', 'success');
+                    log('✓ Voices loaded successfully - select a language to continue', 'success');
                     loadVoicesBtn.disabled = false;
                 } else {
-                    throw new Error(`Failed to retrieve voices: ${result.errorDetails}`);
+                    synthesizer.close();
+                    log(`✗ Failed to retrieve voices. Reason: ${result.reason}`, 'error');
+                    if (result.errorDetails) {
+                        log(`Error details: ${result.errorDetails}`, 'error');
+                    }
+                    loadVoicesBtn.disabled = false;
                 }
             },
             (error) => {
                 synthesizer.close();
-                log(`Error loading voices: ${error}`, 'error');
+                log(`✗ Error loading voices: ${error}`, 'error');
+                log('Please verify your subscription key and region are correct', 'warning');
                 loadVoicesBtn.disabled = false;
             }
         );
     } catch (error) {
-        log(`Error loading voices: ${error.message}`, 'error');
+        log(`✗ Exception loading voices: ${error.message}`, 'error');
+        log('Please check your subscription key and region', 'warning');
         loadVoicesBtn.disabled = false;
     }
 }
