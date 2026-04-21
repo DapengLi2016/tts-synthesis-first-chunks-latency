@@ -20,6 +20,10 @@ const textInput = document.getElementById('textInput');
 const chunksToTrackInput = document.getElementById('chunksToTrack');
 const startAnalysisBtn = document.getElementById('startAnalysisBtn');
 const downloadFullDataBtn = document.getElementById('downloadFullDataBtn');
+const viewHistoryBtn = document.getElementById('viewHistoryBtn');
+const historyModal = document.getElementById('historyModal');
+const closeHistoryModal = document.getElementById('closeHistoryModal');
+const historyList = document.getElementById('historyList');
 const hardRefreshBtn = document.getElementById('hardRefreshBtn');
 const progressSection = document.getElementById('progressSection');
 const progressFill = document.getElementById('progressFill');
@@ -485,6 +489,9 @@ async function startAnalysis() {
 
         displayResults();
         resultsSection.style.display = 'block';
+        
+        // Auto-save to history after analysis completes
+        saveToHistory();
 
     } catch (error) {
         log(`Error during analysis: ${error.message}`, 'error');
@@ -1213,6 +1220,153 @@ async function downloadCharts() {
     log(`${charts.length} charts downloaded`, 'success');
 }
 
+// History Management Functions
+function saveToHistory() {
+    if (analysisData.length === 0) {
+        // Don't log warning when auto-saving with no data
+        return;
+    }
+
+    const historyItem = {
+        id: Date.now(),
+        timestamp: new Date().toISOString(),
+        config: {
+            region: regionInput.value,
+            // Do NOT save subscription key for security
+            language: languageSelect.value,
+            voice: voiceSelect.value === 'custom' ? customVoiceInput.value : voiceSelect.value,
+            outputFormat: outputFormatSelect.value,
+            chunksToTrack: parseInt(chunksToTrackInput.value),
+            textType: textTypeSSML.checked ? 'SSML' : 'Plain Text'
+        },
+        metadata: analysisMetadata,
+        results: analysisData.map(item => ({
+            sentenceIndex: item.sentenceIndex,
+            text: item.text,
+            ssml: item.ssml,
+            isSSML: item.isSSML,
+            totalTime: item.totalTime,
+            firstByteTime: item.firstByteTime,
+            firstChunkTime: item.firstChunkTime,
+            totalSize: item.totalSize,
+            chunks: item.chunks
+        }))
+    };
+
+    // Get existing history from localStorage
+    const history = getHistory();
+    history.unshift(historyItem);
+    
+    // Keep only last 20 items
+    if (history.length > 20) {
+        history.splice(20);
+    }
+
+    localStorage.setItem('ttsAnalysisHistory', JSON.stringify(history));
+    log(`✅ Saved to history (${history.length} items total)`, 'success');
+}
+
+function getHistory() {
+    const stored = localStorage.getItem('ttsAnalysisHistory');
+    return stored ? JSON.parse(stored) : [];
+}
+
+function showHistoryModal() {
+    const history = getHistory();
+    
+    if (history.length === 0) {
+        historyList.innerHTML = '<p style="text-align: center; color: #999; padding: 20px;">No history records found</p>';
+    } else {
+        historyList.innerHTML = history.map((item, index) => `
+            <div class="history-item" data-id="${item.id}">
+                <div class="history-header">
+                    <span class="history-date">${new Date(item.timestamp).toLocaleString()}</span>
+                    <div class="history-actions">
+                        <button class="btn btn-sm btn-info" onclick="loadHistoryItem(${item.id})">📂 Load</button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteHistoryItem(${item.id})">🗑️ Delete</button>
+                    </div>
+                </div>
+                <div class="history-details">
+                    <p><strong>Voice:</strong> ${item.config.voice}</p>
+                    <p><strong>Language:</strong> ${item.config.language}</p>
+                    <p><strong>Sentences:</strong> ${item.results.length}</p>
+                    <p><strong>Avg First Chunk:</strong> ${item.results.length > 0 ? (item.results.reduce((sum, r) => sum + r.firstChunkTime, 0) / item.results.length).toFixed(2) : 'N/A'} ms</p>
+                </div>
+            </div>
+        `).join('');
+    }
+    
+    historyModal.style.display = 'flex';
+}
+
+function hideHistoryModal() {
+    historyModal.style.display = 'none';
+}
+
+function loadHistoryItem(id) {
+    const history = getHistory();
+    const item = history.find(h => h.id === id);
+    
+    if (!item) {
+        log('⚠️ History item not found', 'warning');
+        return;
+    }
+
+    // Restore configuration (except subscription key)
+    regionInput.value = item.config.region;
+    languageSelect.value = item.config.language;
+    
+    if (item.config.voice && allVoices.length > 0) {
+        const voiceOption = Array.from(voiceSelect.options).find(opt => opt.value === item.config.voice);
+        if (voiceOption) {
+            voiceSelect.value = item.config.voice;
+        } else {
+            voiceSelect.value = 'custom';
+            customVoiceInput.value = item.config.voice;
+            customVoiceContainer.style.display = 'block';
+        }
+    }
+    
+    outputFormatSelect.value = item.config.outputFormat;
+    chunksToTrackInput.value = item.config.chunksToTrack;
+    
+    if (item.config.textType === 'SSML') {
+        textTypeSSML.checked = true;
+        textTypePlain.checked = false;
+    } else {
+        textTypePlain.checked = true;
+        textTypeSSML.checked = false;
+    }
+
+    // Restore data
+    analysisData = item.results;
+    analysisMetadata = item.metadata;
+
+    // Display results
+    displayResults();
+    hideHistoryModal();
+    
+    log(`📂 Loaded history from ${new Date(item.timestamp).toLocaleString()}`, 'success');
+    log('⚠️ Note: Subscription key was not restored for security reasons', 'warning');
+}
+
+function deleteHistoryItem(id) {
+    if (!confirm('Are you sure you want to delete this history item?')) {
+        return;
+    }
+
+    const history = getHistory();
+    const filtered = history.filter(h => h.id !== id);
+    localStorage.setItem('ttsAnalysisHistory', JSON.stringify(filtered));
+    
+    showHistoryModal(); // Refresh the list
+    log('🗑️ History item deleted', 'info');
+}
+
+// Make functions available globally for onclick handlers
+window.loadHistoryItem = loadHistoryItem;
+window.deleteHistoryItem = deleteHistoryItem;
+
 // Utility functions
 function average(arr) {
     return arr.reduce((a, b) => a + b, 0) / arr.length;
@@ -1303,6 +1457,8 @@ hardRefreshBtn.addEventListener('click', () => {
 
 startAnalysisBtn.addEventListener('click', startAnalysis);
 downloadFullDataBtn.addEventListener('click', downloadFullDataReport);
+viewHistoryBtn.addEventListener('click', showHistoryModal);
+closeHistoryModal.addEventListener('click', hideHistoryModal);
 generateTextBtn.addEventListener('click', generateText);
 
 // Text Type radio button change handler

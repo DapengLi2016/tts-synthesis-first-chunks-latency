@@ -159,10 +159,24 @@
             <h2>Analysis Results</h2>
             
             <div class="download-buttons">
+                <button id="viewHistoryBtn" class="btn btn-info">📚 View History</button>
                 <button id="downloadFullDataBtn" class="btn btn-primary">Download Complete Package (ZIP)</button>
             </div>
 
             <div id="resultsContainer"></div>
+        </div>
+
+        <!-- History Modal -->
+        <div id="historyModal" class="modal" style="display: none;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>📚 Analysis History</h2>
+                    <button id="closeHistoryModal" class="btn btn-secondary">✖ Close</button>
+                </div>
+                <div class="modal-body">
+                    <div id="historyList"></div>
+                </div>
+            </div>
         </div>
 
         <div class="log-section">
