@@ -630,6 +630,24 @@ regionInput.addEventListener('change', () => {
     }
 });
 
+// Hard refresh button - clears cache and reloads
+hardRefreshBtn.addEventListener('click', () => {
+    log('Performing hard refresh...', 'info');
+    // Clear cache and reload
+    if ('caches' in window) {
+        caches.keys().then(names => {
+            names.forEach(name => caches.delete(name));
+        });
+    }
+    // Force reload from server
+    window.location.reload(true);
+});
+
+loadVoicesBtn.addEventListener('click', loadVoices);
+startAnalysisBtn.addEventListener('click', startAnalysis);
+downloadCsvBtn.addEventListener('click', downloadCsvReport);
+downloadChartBtn.addEventListener('click', downloadCharts);
+
 // Load voices on page load with default region
 window.addEventListener('DOMContentLoaded', () => {
     log('TTS Synthesis First Chunks Latency Analyzer ready', 'success');
