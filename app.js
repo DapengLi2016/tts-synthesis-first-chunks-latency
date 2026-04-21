@@ -38,28 +38,45 @@ async function loadVoices() {
     const region = regionInput.value.trim();
 
     if (!region) {
-        log('Please select a region', 'error');
+        log('❌ Please select a region', 'error');
         return;
     }
 
     try {
-        log(`Loading voices from ${region}...`, 'info');
+        log(`🔄 Loading voices from ${region}...`, 'info');
+        log(`📡 API URL: https://${region}.tts-frontend.speech.microsoft.com/synthesize/list/cognitive-service/voices`, 'info');
         loadVoicesBtn.disabled = true;
 
         // Use anonymous GET request to voice list API
         const url = `https://${region}.tts-frontend.speech.microsoft.com/synthesize/list/cognitive-service/voices`;
-        const response = await fetch(url);
+        
+        log('🌐 Sending fetch request...', 'info');
+        const response = await fetch(url, {
+            method: 'GET',
+            mode: 'cors',
+            headers: {
+                'Accept': 'application/json'
+            }
+        });
+
+        log(`📥 Response received: ${response.status} ${response.statusText}`, response.ok ? 'success' : 'error');
 
         if (!response.ok) {
             throw new Error(`Failed to load voices: ${response.status} ${response.statusText}`);
         }
 
-        allVoices = await response.json();
-        log(`✓ Loaded ${allVoices.length} voices`, 'success');
+        const data = await response.json();
+        allVoices = data;
+        log(`✓ Successfully parsed ${allVoices.length} voices`, 'success');
+
+        if (!allVoices || allVoices.length === 0) {
+            log('⚠️ No voices returned from API', 'warning');
+            return;
+        }
 
         // Extract unique languages
         const languages = [...new Set(allVoices.map(v => v.Locale))].sort();
-        log(`✓ Found ${languages.length} languages`, 'info');
+        log(`✓ Found ${languages.length} unique languages`, 'success');
         
         languageSelect.innerHTML = '<option value="">Select a language</option>';
         languages.forEach(lang => {
@@ -69,20 +86,23 @@ async function loadVoices() {
             languageSelect.appendChild(option);
         });
 
+        log(`✓ Added ${languages.length} languages to dropdown`, 'success');
+
         // Auto-select en-US if available
         const defaultLocale = 'en-US';
         if (languages.includes(defaultLocale)) {
             languageSelect.value = defaultLocale;
+            log(`✓ Auto-selecting ${defaultLocale}...`, 'info');
             // Trigger change event to load voices
             languageSelect.dispatchEvent(new Event('change'));
-            log(`✓ Auto-selected ${defaultLocale} locale`, 'info');
         }
 
-        log('✓ Voices loaded successfully', 'success');
+        log('✅ Voices loaded successfully!', 'success');
         loadVoicesBtn.disabled = false;
     } catch (error) {
-        log(`✗ Error loading voices: ${error.message}`, 'error');
-        log('Please verify the region is correct', 'warning');
+        log(`❌ Error loading voices: ${error.message}`, 'error');
+        log(`📋 Error stack: ${error.stack}`, 'error');
+        log('💡 Tip: Check browser console (F12) for CORS or network errors', 'warning');
         loadVoicesBtn.disabled = false;
     }
 }
@@ -650,8 +670,13 @@ downloadChartBtn.addEventListener('click', downloadCharts);
 
 // Load voices on page load with default region
 window.addEventListener('DOMContentLoaded', () => {
-    log('TTS Synthesis First Chunks Latency Analyzer ready', 'success');
-    log('Loading voices from default region (East US)...', 'info');
+    log('🚀 TTS Synthesis First Chunks Latency Analyzer ready', 'success');
+    log(`🔧 Initializing with region: ${regionInput.value}`, 'info');
+    log(`📊 DOM elements check:`, 'info');
+    log(`  - regionInput: ${regionInput ? '✓' : '✗'}`, regionInput ? 'success' : 'error');
+    log(`  - languageSelect: ${languageSelect ? '✓' : '✗'}`, languageSelect ? 'success' : 'error');
+    log(`  - voiceSelect: ${voiceSelect ? '✓' : '✗'}`, voiceSelect ? 'success' : 'error');
+    log('📡 Loading voices from default region (East US)...', 'info');
     loadVoices();
 });
 
