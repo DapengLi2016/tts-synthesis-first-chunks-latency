@@ -35,10 +35,9 @@ function log(message, type = 'info') {
 // Load voices from Azure
 async function loadVoices() {
     const region = regionInput.value.trim();
-    const subscriptionKey = subscriptionKeyInput.value.trim();
 
-    if (!region || !subscriptionKey) {
-        log('Please select region and enter subscription key', 'error');
+    if (!region) {
+        log('Please select a region', 'error');
         return;
     }
 
@@ -46,51 +45,43 @@ async function loadVoices() {
         log(`Loading voices from ${region}...`, 'info');
         loadVoicesBtn.disabled = true;
 
-        // Use Speech SDK to get voices (avoids CORS issues)
-        const speechConfig = SpeechSDK.SpeechConfig.fromSubscription(subscriptionKey, region);
-        const synthesizer = new SpeechSDK.SpeechSynthesizer(speechConfig);
+        // Use anonymous GET request to voice list API
+        const url = `https://${region}.tts-frontend.speech.microsoft.com/synthesize/list/cognitive-service/voices`;
+        const response = await fetch(url);
 
-        synthesizer.getVoicesAsync(
-            (result) => {
-                synthesizer.close();
-                
-                if (result.reason === SpeechSDK.ResultReason.VoicesListRetrieved) {
-                    allVoices = result.voices;
-                    log(`✓ Loaded ${allVoices.length} voices`, 'success');
+        if (!response.ok) {
+            throw new Error(`Failed to load voices: ${response.status} ${response.statusText}`);
+        }
 
-                    // Extract unique languages
-                    const languages = [...new Set(allVoices.map(v => v.locale))].sort();
-                    log(`✓ Found ${languages.length} languages`, 'info');
-                    
-                    languageSelect.innerHTML = '<option value="">Select a language</option>';
-                    languages.forEach(lang => {
-                        const option = document.createElement('option');
-                        option.value = lang;
-                        option.textContent = lang;
-                        languageSelect.appendChild(option);
-                    });
+        allVoices = await response.json();
+        log(`✓ Loaded ${allVoices.length} voices`, 'success');
 
-                    log('✓ Voices loaded successfully - select a language to continue', 'success');
-                    loadVoicesBtn.disabled = false;
-                } else {
-                    synthesizer.close();
-                    log(`✗ Failed to retrieve voices. Reason: ${result.reason}`, 'error');
-                    if (result.errorDetails) {
-                        log(`Error details: ${result.errorDetails}`, 'error');
-                    }
-                    loadVoicesBtn.disabled = false;
-                }
-            },
-            (error) => {
-                synthesizer.close();
-                log(`✗ Error loading voices: ${error}`, 'error');
-                log('Please verify your subscription key and region are correct', 'warning');
-                loadVoicesBtn.disabled = false;
-            }
-        );
+        // Extract unique languages
+        const languages = [...new Set(allVoices.map(v => v.Locale))].sort();
+        log(`✓ Found ${languages.length} languages`, 'info');
+        
+        languageSelect.innerHTML = '<option value="">Select a language</option>';
+        languages.forEach(lang => {
+            const option = document.createElement('option');
+            option.value = lang;
+            option.textContent = lang;
+            languageSelect.appendChild(option);
+        });
+
+        // Auto-select en-US if available
+        const defaultLocale = 'en-US';
+        if (languages.includes(defaultLocale)) {
+            languageSelect.value = defaultLocale;
+            // Trigger change event to load voices
+            languageSelect.dispatchEvent(new Event('change'));
+            log(`✓ Auto-selected ${defaultLocale} locale`, 'info');
+        }
+
+        log('✓ Voices loaded successfully', 'success');
+        loadVoicesBtn.disabled = false;
     } catch (error) {
-        log(`✗ Exception loading voices: ${error.message}`, 'error');
-        log('Please check your subscription key and region', 'warning');
+        log(`✗ Error loading voices: ${error.message}`, 'error');
+        log('Please verify the region is correct', 'warning');
         loadVoicesBtn.disabled = false;
     }
 }
@@ -104,15 +95,21 @@ languageSelect.addEventListener('change', () => {
         return;
     }
 
-    const filteredVoices = allVoices.filter(v => v.locale === selectedLanguage);
+    const filteredVoices = allVoices.filter(v => v.Locale === selectedLanguage);
     
     voiceSelect.innerHTML = '<option value="">Select a voice</option>';
     filteredVoices.forEach(voice => {
         const option = document.createElement('option');
-        option.value = voice.shortName;
-        option.textContent = `${voice.localName} (${voice.gender})`;
+        option.value = voice.ShortName;
+        option.textContent = `${voice.DisplayName} (${voice.Gender})`;
         voiceSelect.appendChild(option);
     });
+
+    // Auto-select first voice
+    if (filteredVoices.length > 0) {
+        voiceSelect.value = filteredVoices[0].ShortName;
+        log(`✓ Auto-selected voice: ${filteredVoices[0].DisplayName}`, 'info');
+    }
 
     log(`Found ${filteredVoices.length} voices for ${selectedLanguage}`, 'info');
 });
@@ -619,12 +616,31 @@ function getColor(index, alpha = 1) {
     return colors[index % colors.length];
 }
 
-// Event listeners
-loadVoicesBtn.addEventListener('click', loadVoices);
-startAnalysisBtn.addEventListener('click', startAnalysis);
-downloadCsvBtn.addEventListener('click', downloadCsvReport);
-downloadChartBtn.addEventListener('click', downloadCharts);
+// Event listenersregion is changed
+regionInput.addEventListener('change', () => {
+    const region = regionInput.value.trim();
+    
+    if (region) {
+        log('Region selected, loading voices...', 'info');
+        allVoices = []; // Clear existing voices
+        languageSelect.innerHTML = '<option value="">Loading...</option>';
+        voiceSelect.innerHTML = '<option value="">Select language first</option>';
+        loadVoices();
+    }
+});
+
+// Load voices on page load with default region
+window.addEventListener('DOMContentLoaded', () => {
+    log('TTS Synthesis First Chunks Latency Analyzer ready', 'success');
+    log('Loading voices from default region (East US)...', 'info');
+    loadVoices();
+});
+
+// Initial log
+log('Initializing...
+    }
+});
 
 // Initial log
 log('TTS Synthesis First Chunks Latency Analyzer ready', 'success');
-log('Enter your Azure Speech Service credentials and click "Load Voices" to begin', 'info');
+log('Select region and enter your Azure Speech Service subscription key to begin', 'info');
