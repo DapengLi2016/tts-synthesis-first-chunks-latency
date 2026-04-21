@@ -15,6 +15,7 @@ const loadVoicesBtn = document.getElementById('loadVoicesBtn');
 const startAnalysisBtn = document.getElementById('startAnalysisBtn');
 const downloadCsvBtn = document.getElementById('downloadCsvBtn');
 const downloadChartBtn = document.getElementById('downloadChartBtn');
+const hardRefreshBtn = document.getElementById('hardRefreshBtn');
 const progressSection = document.getElementById('progressSection');
 const progressFill = document.getElementById('progressFill');
 const progressText = document.getElementById('progressText');
