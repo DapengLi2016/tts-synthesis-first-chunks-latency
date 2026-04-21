@@ -43,38 +43,46 @@ async function loadVoices() {
     }
 
     try {
-        log('Loading voices...', 'info');
+        log('Loading voices using Speech SDK...', 'info');
         loadVoicesBtn.disabled = true;
 
-        const url = `https://${region}.tts-frontend.speech.microsoft.com/synthesize/list/cognitive-service/voices`;
-        const response = await fetch(url, {
-            headers: {
-                'Ocp-Apim-Subscription-Key': subscriptionKey
+        // Use Speech SDK to get voices (avoids CORS issues)
+        const speechConfig = SpeechSDK.SpeechConfig.fromSubscription(subscriptionKey, region);
+        const synthesizer = new SpeechSDK.SpeechSynthesizer(speechConfig);
+
+        synthesizer.getVoicesAsync(
+            (result) => {
+                synthesizer.close();
+                
+                if (result.reason === SpeechSDK.ResultReason.VoicesListRetrieved) {
+                    allVoices = result.voices;
+                    log(`Loaded ${allVoices.length} voices`, 'success');
+
+                    // Extract unique languages
+                    const languages = [...new Set(allVoices.map(v => v.locale))].sort();
+                    
+                    languageSelect.innerHTML = '<option value="">Select a language</option>';
+                    languages.forEach(lang => {
+                        const option = document.createElement('option');
+                        option.value = lang;
+                        option.textContent = lang;
+                        languageSelect.appendChild(option);
+                    });
+
+                    log('Voices loaded successfully', 'success');
+                    loadVoicesBtn.disabled = false;
+                } else {
+                    throw new Error(`Failed to retrieve voices: ${result.errorDetails}`);
+                }
+            },
+            (error) => {
+                synthesizer.close();
+                log(`Error loading voices: ${error}`, 'error');
+                loadVoicesBtn.disabled = false;
             }
-        });
-
-        if (!response.ok) {
-            throw new Error(`Failed to load voices: ${response.status} ${response.statusText}`);
-        }
-
-        allVoices = await response.json();
-        log(`Loaded ${allVoices.length} voices`, 'success');
-
-        // Extract unique languages
-        const languages = [...new Set(allVoices.map(v => v.Locale))].sort();
-        
-        languageSelect.innerHTML = '<option value="">Select a language</option>';
-        languages.forEach(lang => {
-            const option = document.createElement('option');
-            option.value = lang;
-            option.textContent = lang;
-            languageSelect.appendChild(option);
-        });
-
-        log('Voices loaded successfully', 'success');
+        );
     } catch (error) {
         log(`Error loading voices: ${error.message}`, 'error');
-    } finally {
         loadVoicesBtn.disabled = false;
     }
 }
@@ -88,13 +96,13 @@ languageSelect.addEventListener('change', () => {
         return;
     }
 
-    const filteredVoices = allVoices.filter(v => v.Locale === selectedLanguage);
+    const filteredVoices = allVoices.filter(v => v.locale === selectedLanguage);
     
     voiceSelect.innerHTML = '<option value="">Select a voice</option>';
     filteredVoices.forEach(voice => {
         const option = document.createElement('option');
-        option.value = voice.ShortName;
-        option.textContent = `${voice.DisplayName} (${voice.Gender})`;
+        option.value = voice.shortName;
+        option.textContent = `${voice.localName} (${voice.gender})`;
         voiceSelect.appendChild(option);
     });
 
