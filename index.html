@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TTS Synthesis First Chunks Latency Analyzer</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>TTS Synthesis First Chunks Latency Analyzer</h1>
+            <p class="subtitle">Analyze chunk size and timing for Azure Cognitive Services TTS</p>
+        </header>
+
+        <div class="config-section">
+            <h2>Configuration</h2>
+            
+            <div class="form-group">
+                <label for="region">Region:</label>
+                <input type="text" id="region" placeholder="e.g., eastus, westus2" value="eastus">
+            </div>
+
+            <div class="form-group">
+                <label for="subscriptionKey">Subscription Key:</label>
+                <input type="password" id="subscriptionKey" placeholder="Enter your Azure Speech subscription key">
+            </div>
+
+            <div class="form-group">
+                <label for="language">Language:</label>
+                <select id="language">
+                    <option value="">Loading...</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="voice">Voice:</label>
+                <select id="voice">
+                    <option value="">Select language first</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="outputFormat">Output Format:</label>
+                <select id="outputFormat">
+                    <option value="audio-16khz-32kbitrate-mono-mp3">Audio 16kHz 32kbps Mono MP3</option>
+                    <option value="audio-16khz-64kbitrate-mono-mp3">Audio 16kHz 64kbps Mono MP3</option>
+                    <option value="audio-16khz-128kbitrate-mono-mp3">Audio 16kHz 128kbps Mono MP3</option>
+                    <option value="audio-24khz-48kbitrate-mono-mp3">Audio 24kHz 48kbps Mono MP3</option>
+                    <option value="audio-24khz-96kbitrate-mono-mp3">Audio 24kHz 96kbps Mono MP3</option>
+                    <option value="audio-24khz-160kbitrate-mono-mp3">Audio 24kHz 160kbps Mono MP3</option>
+                    <option value="audio-48khz-96kbitrate-mono-mp3">Audio 48kHz 96kbps Mono MP3</option>
+                    <option value="audio-48khz-192kbitrate-mono-mp3">Audio 48kHz 192kbps Mono MP3</option>
+                    <option value="riff-16khz-16bit-mono-pcm">RIFF 16kHz 16bit Mono PCM</option>
+                    <option value="riff-24khz-16bit-mono-pcm" selected>RIFF 24kHz 16bit Mono PCM</option>
+                    <option value="riff-48khz-16bit-mono-pcm">RIFF 48kHz 16bit Mono PCM</option>
+                    <option value="webm-16khz-16bit-mono-opus">WebM 16kHz 16bit Mono Opus</option>
+                    <option value="webm-24khz-16bit-mono-opus">WebM 24kHz 16bit Mono Opus</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="sentenceCount">Number of Sentences:</label>
+                <input type="number" id="sentenceCount" value="10" min="1" max="100">
+            </div>
+
+            <div class="form-group">
+                <label for="chunksToTrack">Chunks to Track:</label>
+                <input type="number" id="chunksToTrack" value="10" min="1" max="50">
+                <small>Number of first chunks to analyze per sentence</small>
+            </div>
+
+            <button id="loadVoicesBtn" class="btn btn-secondary">Load Voices</button>
+            <button id="startAnalysisBtn" class="btn btn-primary">Start Analysis</button>
+        </div>
+
+        <div class="progress-section" id="progressSection" style="display: none;">
+            <h2>Progress</h2>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <p id="progressText">Ready to start...</p>
+        </div>
+
+        <div class="results-section" id="resultsSection" style="display: none;">
+            <h2>Analysis Results</h2>
+            
+            <div class="download-buttons">
+                <button id="downloadCsvBtn" class="btn btn-success">Download CSV Report</button>
+                <button id="downloadChartBtn" class="btn btn-info">Download Charts (PNG)</button>
+            </div>
+
+            <div id="resultsContainer"></div>
+        </div>
+
+        <div class="log-section">
+            <h2>Logs</h2>
+            <div id="logContainer"></div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/microsoft-cognitiveservices-speech-sdk@latest/distrib/browser/microsoft.cognitiveservices.speech.sdk.bundle-min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
