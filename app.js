@@ -1,3 +1,344 @@
+// i18n translations
+const translations = {
+    en: {
+        // Header
+        title: "TTS Synthesis First Chunks Latency Analyzer",
+        subtitle: "Analyze chunk size and timing for Azure Cognitive Services TTS",
+        
+        // Language toggle
+        langToggle: "中文",
+        
+        // Introduction
+        introTitle: "Project Introduction & Usage Guide",
+        introExpand: "(Click to expand)",
+        introWhat: "What is this tool?",
+        introWhatText: "This analyzer helps you understand the real-time performance characteristics of Azure Text-to-Speech (TTS) synthesis by measuring chunk delivery timing and sizes. It's essential for optimizing audio streaming applications that require low latency.",
+        introMetrics: "Key Metrics Analyzed",
+        introMetric1: "First Chunk Latency:",
+        introMetric1Desc: "Time until the first audio chunk arrives (critical for perceived responsiveness)",
+        introMetric2: "Chunk Sizes:",
+        introMetric2Desc: "Distribution of audio chunk sizes throughout synthesis",
+        introMetric3: "Chunk Timing:",
+        introMetric3Desc: "When each chunk starts and completes receiving",
+        introMetric4: "Inter-Chunk Delays:",
+        introMetric4Desc: "Gaps between chunk deliveries (helps identify jitter)",
+        introFlow: "Usage Flow",
+        introFlowStep1: "Configure Parameters",
+        introFlowStep1Desc: "Set Azure region, subscription key, voice, language, and output format",
+        introFlowStep2: "Prepare Text",
+        introFlowStep2Desc: "Enter SSML or plain text, or generate sample sentences",
+        introFlowStep3: "Run Analysis",
+        introFlowStep3Desc: "Click \"Start Analysis\" to synthesize and measure chunk delivery",
+        introFlowStep4: "Review Results",
+        introFlowStep4Desc: "Examine charts, statistics, and detailed chunk data tables",
+        introFlowStep5: "Export & Save",
+        introFlowStep5Desc: "Download complete package (ZIP) or view saved history",
+        introTips: "Tips for Best Results",
+        introTip1: "Test with multiple sentences to get representative statistics",
+        introTip2: "Try different output formats to compare latency characteristics",
+        introTip3: "Use the history feature to compare different configurations",
+        introTip4: "Export data for deeper analysis in Excel or other tools",
+        introTip5: "Check inter-chunk delays to identify network jitter issues",
+        introPrivacy: "Privacy & Security",
+        introPrivacyText: "Your Azure subscription key is never saved to browser storage. All analysis runs locally in your browser, and history data excludes sensitive credentials.",
+        
+        // Configuration
+        configTitle: "Configuration",
+        region: "Region:",
+        subscriptionKey: "Subscription Key:",
+        language: "Language:",
+        voice: "Voice:",
+        customVoice: "Custom Voice Name:",
+        customVoicePlaceholder: "Enter custom voice name (e.g., YourCustomVoiceName)",
+        outputFormat: "Output Format:",
+        chunksToTrack: "Number of Chunks to Track:",
+        textType: "Text Type:",
+        textTypeSSML: "SSML",
+        textTypePlain: "Plain Text",
+        generateSample: "Generate Sample",
+        sampleNumber: "Number:",
+        textToSynthesize: "Text to Synthesize:",
+        textPlaceholder: "Enter text to synthesize (one sentence per line for Plain Text, or SSML blocks separated by blank lines)",
+        startAnalysis: "Start Analysis",
+        
+        // Progress
+        progressTitle: "Analysis Progress",
+        
+        // Results
+        resultsTitle: "Analysis Results",
+        viewHistory: "View History",
+        downloadPackage: "Download Complete Package (ZIP)",
+        summaryStats: "Summary Statistics",
+        totalSentences: "Total Sentences:",
+        avgFirstChunk: "Average First Chunk Time:",
+        avgTotalTime: "Average Total Time:",
+        avgChunkSize: "Average Chunk Size:",
+        totalDataSize: "Total Data Received:",
+        chartLatency: "First Chunk Latency Distribution",
+        chartLatencyDesc: "Shows how quickly the first audio chunk arrives for each sentence. Lower is better for responsiveness.",
+        chartAvgChunkSize: "Average Chunk Size by Sentence",
+        chartAvgChunkSizeDesc: "Average size of audio chunks for each sentence. Helps understand data delivery patterns.",
+        chartStartTime: "Chunk Start Receive Time",
+        chartStartTimeDesc: "When each chunk started being received (time of first byte). Shows the timing pattern of chunk arrivals.",
+        chartCompleteTime: "Chunk Complete Receive Time",
+        chartCompleteTimeDesc: "When each chunk was fully received. Compare with start time to see chunk transfer duration.",
+        detailedChunkData: "Detailed Chunk Data",
+        colSentence: "Sentence",
+        colChunk: "Chunk #",
+        colSize: "Size",
+        colStartReceive: "Start Receive (ms)",
+        colCompleteReceive: "Complete Receive (ms)",
+        colInterChunkDelay: "Inter-Chunk Delay (ms)",
+        columnDescriptions: "Column Descriptions (Click to expand)",
+        colDescSentence: "Which sentence this chunk belongs to",
+        colDescChunk: "The sequential number of the chunk within this sentence",
+        colDescSize: "The size of this audio chunk in bytes",
+        colDescStartReceive: "Time from synthesis start when this chunk started being received. For the first chunk, this is when the first byte arrived.",
+        colDescCompleteReceive: "Time from synthesis start when this chunk was fully received",
+        colDescInterChunkDelay: "Time interval between receiving the previous chunk and this chunk. For the first chunk, this is 0. Helps identify delays or jitter in chunk delivery.",
+        
+        // Log
+        logTitle: "Activity Log",
+        
+        // History
+        historyTitle: "Analysis History",
+        historyClose: "Close",
+        historyLoad: "Load",
+        historyDelete: "Delete",
+        historyVoice: "Voice:",
+        historyLanguage: "Language:",
+        historyFormat: "Output Format:",
+        historySentences: "Sentences:",
+        historyAvgFirstChunk: "Avg First Chunk:",
+        
+        // Chart labels
+        chartSamples: "samples",
+        chartSentence: "Sentence",
+        chartChunk: "Chunk",
+        chartMs: "ms",
+        chartBytes: "Bytes",
+        
+        // Messages
+        msgNoData: "No data available to download",
+        msgPreparingPackage: "Preparing complete package...",
+        msgPackageReady: "Complete package downloaded successfully!",
+        msgSavedToHistory: "Saved to history",
+        msgItemsTotal: "items total",
+        msgConfirmDelete: "Are you sure you want to delete this history item?",
+        msgHistoryDeleted: "History item deleted",
+        msgNoHistory: "No analysis history available. Run an analysis to create history.",
+        msgKeyWarning: "Note: Subscription key was not saved. Please enter it manually.",
+        msgFillFields: "Please fill in all required fields and select/enter a voice",
+        msgEnterText: "Please enter or generate text to synthesize",
+        msgUsingCustomVoice: "Using custom voice:",
+        msgUsingSelectedVoice: "Using selected voice:",
+        msgTextType: "Text Type:",
+        msgTexts: "Texts:",
+        msgStartingAnalysis: "Starting analysis...",
+        msgConfiguration: "Configuration:",
+        msgProcessing: "Processing text",
+        msgOf: "of",
+        msgSynthesizing: "Synthesizing text",
+        msgCompleted: "completed:",
+        msgChunks: "chunks,",
+        msgTotalTime: "total",
+        msgError: "Error synthesizing text",
+        msgAnalysisComplete: "Analysis complete!",
+        msgAnalysisSuccess: "Analysis completed successfully",
+        msgErrorDuringAnalysis: "Error during analysis:",
+        msgCsvDownloaded: "CSV report downloaded",
+    },
+    zh: {
+        // Header
+        title: "TTS 合成首块延迟分析器",
+        subtitle: "分析 Azure 认知服务 TTS 的块大小和时序",
+        
+        // Language toggle
+        langToggle: "English",
+        
+        // Introduction
+        introTitle: "项目介绍与使用指南",
+        introExpand: "（点击展开）",
+        introWhat: "这个工具是什么？",
+        introWhatText: "此分析器通过测量音频块传递时序和大小，帮助您了解 Azure 文本转语音（TTS）合成的实时性能特征。对于优化需要低延迟的音频流应用程序至关重要。",
+        introMetrics: "关键指标分析",
+        introMetric1: "首块延迟：",
+        introMetric1Desc: "第一个音频块到达的时间（对感知响应性至关重要）",
+        introMetric2: "块大小：",
+        introMetric2Desc: "整个合成过程中音频块大小的分布",
+        introMetric3: "块时序：",
+        introMetric3Desc: "每个块开始和完成接收的时间",
+        introMetric4: "块间延迟：",
+        introMetric4Desc: "块传递之间的间隔（有助于识别抖动）",
+        introFlow: "使用流程",
+        introFlowStep1: "配置参数",
+        introFlowStep1Desc: '设置 Azure 区域、订阅密钥、语音、语言和输出格式',
+        introFlowStep2: '准备文本',
+        introFlowStep2Desc: '输入 SSML 或纯文本，或生成示例句子',
+        introFlowStep3: '运行分析',
+        introFlowStep3Desc: '点击"开始分析"来合成并测量块传递',
+        introFlowStep4: '查看结果',
+        introFlowStep4Desc: '检查图表、统计数据和详细的块数据表',
+        introFlowStep5: '导出和保存',
+        introFlowStep5Desc: '下载完整包（ZIP）或查看保存的历史记录',
+        introTips: "最佳实践提示",
+        introTip1: "使用多个句子进行测试以获得代表性统计数据",
+        introTip2: "尝试不同的输出格式以比较延迟特性",
+        introTip3: "使用历史记录功能比较不同配置",
+        introTip4: "导出数据以在 Excel 或其他工具中进行深入分析",
+        introTip5: "检查块间延迟以识别网络抖动问题",
+        introPrivacy: "隐私与安全",
+        introPrivacyText: "您的 Azure 订阅密钥永远不会保存到浏览器存储。所有分析都在您的浏览器中本地运行，历史数据不包含敏感凭据。",
+        
+        // Configuration
+        configTitle: "配置",
+        region: "区域：",
+        subscriptionKey: "订阅密钥：",
+        language: "语言：",
+        voice: "语音：",
+        customVoice: "自定义语音名称：",
+        customVoicePlaceholder: "输入自定义语音名称（例如：YourCustomVoiceName）",
+        outputFormat: "输出格式：",
+        chunksToTrack: "要跟踪的块数：",
+        textType: "文本类型：",
+        textTypeSSML: "SSML",
+        textTypePlain: "纯文本",
+        generateSample: "生成示例",
+        sampleNumber: "数量：",
+        textToSynthesize: "要合成的文本：",
+        textPlaceholder: "输入要合成的文本（纯文本每行一句，SSML 块用空行分隔）",
+        startAnalysis: "开始分析",
+        
+        // Progress
+        progressTitle: "分析进度",
+        
+        // Results
+        resultsTitle: "分析结果",
+        viewHistory: "查看历史",
+        downloadPackage: "下载完整包（ZIP）",
+        summaryStats: "汇总统计",
+        totalSentences: "总句子数：",
+        avgFirstChunk: "平均首块时间：",
+        avgTotalTime: "平均总时间：",
+        avgChunkSize: "平均块大小：",
+        totalDataSize: "接收的总数据：",
+        chartLatency: "首块延迟分布",
+        chartLatencyDesc: "显示每个句子的第一个音频块到达的速度。越低响应性越好。",
+        chartAvgChunkSize: "每句平均块大小",
+        chartAvgChunkSizeDesc: "每个句子的音频块平均大小。有助于了解数据传递模式。",
+        chartStartTime: "块开始接收时间",
+        chartStartTimeDesc: "每个块开始接收的时间（第一字节时间）。显示块到达的时序模式。",
+        chartCompleteTime: "块完成接收时间",
+        chartCompleteTimeDesc: "每个块完全接收的时间。与开始时间比较可以看到块传输持续时间。",
+        detailedChunkData: "详细块数据",
+        colSentence: "句子",
+        colChunk: "块 #",
+        colSize: "大小",
+        colStartReceive: "开始接收 (ms)",
+        colCompleteReceive: "完成接收 (ms)",
+        colInterChunkDelay: "块间延迟 (ms)",
+        columnDescriptions: "列说明（点击展开）",
+        colDescSentence: "此块所属的句子",
+        colDescChunk: "此块在该句子中的序号",
+        colDescSize: "此音频块的大小（字节）",
+        colDescStartReceive: "从合成开始到此块开始接收的时间。对于第一个块，这是第一个字节到达的时间。",
+        colDescCompleteReceive: "从合成开始到此块完全接收的时间",
+        colDescInterChunkDelay: "接收上一个块和此块之间的时间间隔。对于第一个块，此值为 0。有助于识别块传递中的延迟或抖动。",
+        
+        // Log
+        logTitle: "活动日志",
+        
+        // History
+        historyTitle: "分析历史",
+        historyClose: "关闭",
+        historyLoad: "加载",
+        historyDelete: "删除",
+        historyVoice: "语音：",
+        historyLanguage: "语言：",
+        historyFormat: "输出格式：",
+        historySentences: "句子数：",
+        historyAvgFirstChunk: "平均首块：",
+        
+        // Chart labels
+        chartSamples: "样本",
+        chartSentence: "句子",
+        chartChunk: "块",
+        chartMs: "毫秒",
+        chartBytes: "字节",
+        
+        // Messages
+        msgNoData: "没有可下载的数据",
+        msgPreparingPackage: "正在准备完整包...",
+        msgPackageReady: "完整包下载成功！",
+        msgSavedToHistory: "已保存到历史记录",
+        msgItemsTotal: "项总计",
+        msgConfirmDelete: "确定要删除此历史记录吗？",
+        msgHistoryDeleted: "历史记录已删除",
+        msgNoHistory: "没有可用的分析历史记录。运行分析以创建历史记录。",
+        msgKeyWarning: "注意：订阅密钥未保存。请手动输入。",
+        msgFillFields: "请填写所有必填字段并选择/输入语音",
+        msgEnterText: "请输入或生成要合成的文本",
+        msgUsingCustomVoice: "使用自定义语音：",
+        msgUsingSelectedVoice: "使用选定语音：",
+        msgTextType: "文本类型：",
+        msgTexts: "文本：",
+        msgStartingAnalysis: "开始分析...",
+        msgConfiguration: "配置：",
+        msgProcessing: "正在处理文本",
+        msgOf: "/",
+        msgSynthesizing: "正在合成文本",
+        msgCompleted: "已完成：",
+        msgChunks: "块，",
+        msgTotalTime: "总计",
+        msgError: "合成文本时出错",
+        msgAnalysisComplete: "分析完成！",
+        msgAnalysisSuccess: "分析成功完成",
+        msgErrorDuringAnalysis: "分析过程中出错：",
+        msgCsvDownloaded: "CSV 报告已下载",
+    }
+};
+
+// Current language
+let currentLang = localStorage.getItem('ttsAnalyzerLang') || 'en';
+
+// Translation function
+function t(key) {
+    return translations[currentLang][key] || key;
+}
+
+// Update all UI text
+function updateLanguage() {
+    // Update HTML lang attribute
+    document.documentElement.lang = currentLang;
+    
+    // Update all elements with data-i18n attribute
+    document.querySelectorAll('[data-i18n]').forEach(element => {
+        const key = element.getAttribute('data-i18n');
+        if (element.tagName === 'INPUT' && (element.type === 'text' || element.type === 'password')) {
+            element.placeholder = t(key);
+        } else if (element.tagName === 'TEXTAREA') {
+            element.placeholder = t(key);
+        } else {
+            element.textContent = t(key);
+        }
+    });
+    
+    // Update language toggle button
+    const langToggle = document.getElementById('langToggle');
+    if (langToggle) {
+        langToggle.textContent = t('langToggle');
+    }
+    
+    // Save preference
+    localStorage.setItem('ttsAnalyzerLang', currentLang);
+}
+
+// Toggle language
+function toggleLanguage() {
+    currentLang = currentLang === 'en' ? 'zh' : 'en';
+    updateLanguage();
+}
+
 // Global variables
 let allVoices = [];
 let analysisData = [];
@@ -1023,7 +1364,21 @@ function createTop10ChunksStatsTable() {
 function createDetailedTable() {
     const tableCard = document.createElement('div');
     tableCard.className = 'result-card';
-    tableCard.innerHTML = '<h3>Detailed Chunk Data</h3>';
+    
+    // Create collapsible header
+    const header = document.createElement('h3');
+    header.style.cursor = 'pointer';
+    header.style.display = 'flex';
+    header.style.alignItems = 'center';
+    header.style.gap = '10px';
+    header.style.userSelect = 'none';
+    header.innerHTML = '<span id="detailTableToggle">▼</span> Detailed Chunk Data';
+    tableCard.appendChild(header);
+    
+    // Create container for collapsible content
+    const collapsibleContent = document.createElement('div');
+    collapsibleContent.id = 'detailTableContent';
+    collapsibleContent.style.display = 'block';
     
     const table = document.createElement('table');
     table.className = 'result-table';
@@ -1040,7 +1395,7 @@ function createDetailedTable() {
         </thead>
         <tbody id="detailTableBody"></tbody>
     `;
-    tableCard.appendChild(table);
+    collapsibleContent.appendChild(table);
     
     // Add column descriptions for detailed table
     const description = document.createElement('details');
@@ -1058,7 +1413,22 @@ function createDetailedTable() {
             <p style="margin: 8px 0;"><strong>Inter-Chunk Delay (ms):</strong> Time interval between receiving the previous chunk and this chunk. For the first chunk, this is 0. Helps identify delays or jitter in chunk delivery.</p>
         </div>
     `;
-    tableCard.appendChild(description);
+    collapsibleContent.appendChild(description);
+    
+    tableCard.appendChild(collapsibleContent);
+    
+    // Add click event to toggle collapse
+    header.addEventListener('click', () => {
+        const content = document.getElementById('detailTableContent');
+        const toggle = document.getElementById('detailTableToggle');
+        if (content.style.display === 'none') {
+            content.style.display = 'block';
+            toggle.textContent = '▼';
+        } else {
+            content.style.display = 'none';
+            toggle.textContent = '▶';
+        }
+    });
     
     resultsContainer.appendChild(tableCard);
 
@@ -1275,22 +1645,23 @@ function showHistoryModal() {
     const history = getHistory();
     
     if (history.length === 0) {
-        historyList.innerHTML = '<p style="text-align: center; color: #999; padding: 20px;">No history records found</p>';
+        historyList.innerHTML = `<p style="text-align: center; color: #999; padding: 20px;">${t('msgNoHistory')}</p>`;
     } else {
         historyList.innerHTML = history.map((item, index) => `
             <div class="history-item" data-id="${item.id}">
                 <div class="history-header">
                     <span class="history-date">${new Date(item.timestamp).toLocaleString()}</span>
                     <div class="history-actions">
-                        <button class="btn btn-sm btn-info" onclick="loadHistoryItem(${item.id})">📂 Load</button>
-                        <button class="btn btn-sm btn-danger" onclick="deleteHistoryItem(${item.id})">🗑️ Delete</button>
+                        <button class="btn btn-sm btn-info" onclick="loadHistoryItem(${item.id})">📂 ${t('historyLoad')}</button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteHistoryItem(${item.id})">🗑️ ${t('historyDelete')}</button>
                     </div>
                 </div>
                 <div class="history-details">
-                    <p><strong>Voice:</strong> ${item.config.voice}</p>
-                    <p><strong>Language:</strong> ${item.config.language}</p>
-                    <p><strong>Sentences:</strong> ${item.results.length}</p>
-                    <p><strong>Avg First Chunk:</strong> ${item.results.length > 0 ? (item.results.reduce((sum, r) => sum + r.firstChunkTime, 0) / item.results.length).toFixed(2) : 'N/A'} ms</p>
+                    <p><strong>${t('historyVoice')}</strong> ${item.config.voice}</p>
+                    <p><strong>${t('historyLanguage')}</strong> ${item.config.language}</p>
+                    <p><strong>${t('historyFormat')}</strong> ${item.config.outputFormat}</p>
+                    <p><strong>${t('historySentences')}</strong> ${item.results.length}</p>
+                    <p><strong>${t('historyAvgFirstChunk')}</strong> ${item.results.length > 0 ? (item.results.reduce((sum, r) => sum + r.firstChunkTime, 0) / item.results.length).toFixed(2) : 'N/A'} ms</p>
                 </div>
             </div>
         `).join('');
@@ -1476,6 +1847,9 @@ textTypeSSML.addEventListener('change', () => {
 
 // Load voices on page load with default region
 window.addEventListener('DOMContentLoaded', () => {
+    // Initialize language
+    updateLanguage();
+    
     log('🚀 TTS Synthesis First Chunks Latency Analyzer ready', 'success');
     log(`🔧 Default region: ${regionInput.value}`, 'info');
     log('💡 Enter your subscription key to load voice list', 'info');
