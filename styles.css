@@ -298,3 +298,21 @@ h2 {
     flex-wrap: wrap;
     margin-bottom: 20px;
 }
+
+.advanced-section {
+    border-top: 1px solid #e0e0e0;
+    padding-top: 10px;
+}
+
+.advanced-section summary {
+    user-select: none;
+    outline: none;
+}
+
+.advanced-section summary:hover {
+    color: #764ba2;
+}
+
+.advanced-section[open] summary {
+    margin-bottom: 10px;
+}

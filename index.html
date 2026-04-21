@@ -16,12 +16,6 @@
         <div class="config-section">
             <h2>Configuration</h2>
             
-            <div style="margin-bottom: 15px;">
-                <button id="hardRefreshBtn" class="btn btn-secondary" style="background: #dc3545;">
-                    🔄 Hard Refresh (Clear Cache)
-                </button>
-            </div>
-            
             <div class="form-group">
                 <label for="region">Region:</label>
                 <select id="region">
@@ -111,6 +105,20 @@
 
             <button id="loadVoicesBtn" class="btn btn-secondary" style="display: none;">Load Voices</button>
             <button id="startAnalysisBtn" class="btn btn-primary">Start Analysis</button>
+
+            <details class="advanced-section" style="margin-top: 20px;">
+                <summary style="cursor: pointer; font-weight: 600; color: #667eea; padding: 10px 0;">
+                    🔧 Advanced Options
+                </summary>
+                <div style="padding: 15px 0;">
+                    <button id="hardRefreshBtn" class="btn btn-secondary" style="background: #dc3545;">
+                        🔄 Hard Refresh (Clear Cache)
+                    </button>
+                    <small style="display: block; margin-top: 10px; color: #777;">
+                        Use this if language/voice lists are not loading properly
+                    </small>
+                </div>
+            </details>
         </div>
 
         <div class="progress-section" id="progressSection" style="display: none;">
