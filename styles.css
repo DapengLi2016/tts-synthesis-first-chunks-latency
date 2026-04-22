@@ -49,6 +49,38 @@ header h1 {
     border-bottom: none;
 }
 
+.footer {
+    background: #f8f9fa;
+    border-top: 2px solid #e0e0e0;
+    padding: 20px 30px;
+}
+
+.footer-content {
+    text-align: center;
+}
+
+.footer-text {
+    font-size: 0.85em;
+    color: #777;
+    margin: 5px 0;
+}
+
+.footer-link {
+    color: #667eea;
+    text-decoration: underline;
+    font-weight: 600;
+    transition: color 0.3s;
+}
+
+.footer-link:hover {
+    color: #764ba2;
+}
+
+.footer-timestamp {
+    color: #999;
+    font-size: 0.8em;
+}
+
 h2 {
     color: #333;
     margin-bottom: 20px;
