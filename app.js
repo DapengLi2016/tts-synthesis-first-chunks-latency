@@ -623,6 +623,11 @@ voiceSelect.addEventListener('change', () => {
 // Convert output format to Speech SDK format
 function convertOutputFormat(format) {
     const formatMap = {
+<<<<<<< Updated upstream
+=======
+        'raw-16khz-16bit-mono-pcm': SpeechSDK.SpeechSynthesisOutputFormat.Raw16Khz16BitMonoPcm,
+        'raw-24khz-16bit-mono-pcm': SpeechSDK.SpeechSynthesisOutputFormat.Raw24Khz16BitMonoPcm,
+>>>>>>> Stashed changes
         'audio-16khz-32kbitrate-mono-mp3': SpeechSDK.SpeechSynthesisOutputFormat.Audio16Khz32KBitRateMonoMp3,
         'audio-16khz-64kbitrate-mono-mp3': SpeechSDK.SpeechSynthesisOutputFormat.Audio16Khz64KBitRateMonoMp3,
         'audio-16khz-128kbitrate-mono-mp3': SpeechSDK.SpeechSynthesisOutputFormat.Audio16Khz128KBitRateMonoMp3,
@@ -737,6 +742,114 @@ async function synthesizeSentence(config, voiceName, text, sentenceIndex, chunks
     });
 }
 
+<<<<<<< Updated upstream
+=======
+// Synthesize over the REST endpoint and track chunks from the streaming response body.
+async function synthesizeSentenceHttp(region, subscriptionKey, outputFormat, voiceName, text, sentenceIndex, chunksToTrack) {
+    const isSSML = text.trim().startsWith('<speak');
+    const ssml = isSSML ? text : `<speak version='1.0' xml:lang='en-US'><voice name='${voiceName}'>${text}</voice></speak>`;
+    const clientConnectionId = crypto.randomUUID();
+    const startTime = performance.now();
+    const response = await fetch(`https://${region}.tts.speech.microsoft.com/cognitiveservices/v1`, {
+        method: 'POST',
+        headers: {
+            'Ocp-Apim-Subscription-Key': subscriptionKey,
+            'Content-Type': 'application/ssml+xml',
+            'X-Microsoft-OutputFormat': outputFormat,
+            'X-ConnectionId': clientConnectionId
+        },
+        body: ssml
+    });
+
+    const apimRequestId = response.headers.get('apim-request-id');
+    const responseRequestId = response.headers.get('X-RequestId');
+
+    if (!response.ok) {
+        const errorDetails = await response.text();
+        const responseIds = `Turn ID=${clientConnectionId}, X-RequestId=${responseRequestId || '<not exposed>'}, apim-request-id=${apimRequestId || '<not exposed>'}`;
+        const formatHint = response.status === 400
+            ? ` Verify that voice ${voiceName} supports ${outputFormat} and inspect synthesisstop with the Turn ID.`
+            : '';
+        throw new Error(`HTTP synthesis failed: ${response.status} ${response.statusText}. ${responseIds}.${formatHint}${errorDetails ? ` Response: ${errorDetails}` : ''}`);
+    }
+
+    if (!response.body) {
+        throw new Error('HTTP synthesis response does not expose a streaming body');
+    }
+
+    // SynthesisStop uses the client connection ID as TurnId on the HTTP path.
+    const turnId = clientConnectionId;
+
+    const reader = response.body.getReader();
+    const chunks = [];
+    const audioParts = [];
+    let firstByteTime = null;
+    let cumulativeBytes = 0;
+    let lastChunkReceivedTime = null;
+    let lastChunkSize = null;
+
+    while (true) {
+        const { done, value } = await reader.read();
+        if (done) {
+            break;
+        }
+
+        const chunkReceivedTime = performance.now();
+        const timeFromStart = chunkReceivedTime - startTime;
+        const chunkSize = value.byteLength;
+        audioParts.push(value);
+        cumulativeBytes += chunkSize;
+
+        if (firstByteTime === null) {
+            firstByteTime = timeFromStart;
+        }
+
+        if (chunks.length < chunksToTrack) {
+            const interChunkDelay = lastChunkReceivedTime === null ? 0 : chunkReceivedTime - lastChunkReceivedTime;
+            const sizeChangePercent = lastChunkSize === null ? 0 : ((chunkSize - lastChunkSize) / lastChunkSize * 100);
+            chunks.push({
+                chunkNumber: chunks.length + 1,
+                length: chunkSize,
+                receivedTimeFromFirstByte: timeFromStart - firstByteTime,
+                completedTimeFromFirstByte: timeFromStart - firstByteTime,
+                timeOffset: timeFromStart,
+                interChunkDelay: interChunkDelay,
+                cumulativeBytes: cumulativeBytes,
+                sizeChangePercent: sizeChangePercent
+            });
+        }
+
+        lastChunkReceivedTime = chunkReceivedTime;
+        lastChunkSize = chunkSize;
+    }
+
+    const audioData = new Uint8Array(cumulativeBytes);
+    let offset = 0;
+    audioParts.forEach(part => {
+        audioData.set(part, offset);
+        offset += part.byteLength;
+    });
+
+    return {
+        sentenceIndex: sentenceIndex + 1,
+        text: text,
+        ssml: ssml,
+        isSSML: isSSML,
+        chunks: chunks,
+        totalTime: performance.now() - startTime,
+        firstChunkTime: firstByteTime,
+        firstByteTime: firstByteTime,
+        totalSize: cumulativeBytes,
+        audioData: audioData,
+        turnId: turnId,
+        requestId: responseRequestId || clientConnectionId,
+        clientConnectionId: clientConnectionId,
+        apimRequestId: apimRequestId,
+        responseRequestId: responseRequestId
+    };
+}
+
+>>>>>>> Stashed changes
 // Start analysis
 // Start analysis
 async function startAnalysis() {
