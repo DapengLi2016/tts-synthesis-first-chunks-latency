@@ -8,6 +8,7 @@ This tool helps AACS (Azure AI Content Safety) team analyze the timing and size 
 
 - **Chunk Size**: Size of each audio chunk received during synthesis
 - **Time Offset**: Timing from synthesis start to chunk receipt
+- **Absolute Receipt Time**: UTC and Beijing (UTC+8) wall-clock timestamps for each tracked chunk
 - **Audio Offset**: Audio duration offset for each chunk
 - **First Chunk Latency**: Time to receive the first audio chunk
 - **Total Synthesis Time**: Complete synthesis duration
