@@ -169,8 +169,21 @@
             </div>
 
             <div class="form-group">
-                <label for="outputFormat" data-i18n="outputFormat">Output Format:</label>
+                <label for="protocol">Protocol:</label>
+                <select id="protocol">
+                    <option value="websocket" selected>WebSocket (Speech SDK)</option>
+                    <option value="http">HTTP streaming</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="outputFormat">Output Format:</label>
                 <select id="outputFormat">
+                    <option value="raw-8khz-16bit-mono-pcm">RAW 8kHz 16bit Mono PCM</option>
+                    <option value="raw-16khz-16bit-mono-pcm">RAW 16kHz 16bit Mono PCM</option>
+                    <option value="raw-22050hz-16bit-mono-pcm">RAW 22.05kHz 16bit Mono PCM</option>
+                    <option value="raw-24khz-16bit-mono-pcm">RAW 24kHz 16bit Mono PCM</option>
+                    <option value="raw-48khz-16bit-mono-pcm">RAW 48kHz 16bit Mono PCM</option>
                     <option value="audio-16khz-32kbitrate-mono-mp3">Audio 16kHz 32kbps Mono MP3</option>
                     <option value="audio-16khz-64kbitrate-mono-mp3">Audio 16kHz 64kbps Mono MP3</option>
                     <option value="audio-16khz-128kbitrate-mono-mp3">Audio 16kHz 128kbps Mono MP3</option>
@@ -202,6 +215,10 @@
                     <label style="display: flex; align-items: center; gap: 5px; font-weight: normal;">
                         <span data-i18n="sampleNumber">Number:</span>
                         <input type="number" id="sampleCount" value="10" min="1" max="40" style="width: 60px; margin: 0 5px;">
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 5px; font-weight: normal;">
+                        <span>Repeat:</span>
+                        <input type="number" id="synthesisRepeat" value="1" min="1" max="100" style="width: 60px; margin: 0 5px;" title="Number of synthesis repetitions (cycles through texts)">
                     </label>
                 </div>
             </div>
@@ -274,6 +291,23 @@
             <h2>Logs</h2>
             <div id="logContainer"></div>
         </div>
+
+        <footer class="footer">
+            <div class="footer-content">
+                <p class="footer-text">Data stored locally in browser</p>
+                <p class="footer-text">
+                    Build: <a
+                        href="https://github.com/DapengLi2016/tts-synthesis-first-chunks-latency/commit/a9bda651be7cdee8d4a4444a5874f1fe5f58943a"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="footer-link"
+                    >a9bda65</a>
+                </p>
+                <p class="footer-text footer-timestamp">
+                    <script>document.write(new Date().toLocaleString());</script>
+                </p>
+            </div>
+        </footer>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/microsoft-cognitiveservices-speech-sdk@latest/distrib/browser/microsoft.cognitiveservices.speech.sdk.bundle-min.js"></script>

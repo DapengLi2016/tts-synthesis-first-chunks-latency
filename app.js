@@ -352,10 +352,12 @@ const languageSelect = document.getElementById('language');
 const voiceSelect = document.getElementById('voice');
 const customVoiceInput = document.getElementById('customVoice');
 const customVoiceContainer = document.getElementById('customVoiceContainer');
+const protocolSelect = document.getElementById('protocol');
 const outputFormatSelect = document.getElementById('outputFormat');
 const textTypePlain = document.getElementById('textTypePlain');
 const textTypeSSML = document.getElementById('textTypeSSML');
 const sampleCountInput = document.getElementById('sampleCount');
+const synthesisRepeatInput = document.getElementById('synthesisRepeat');
 const generateTextBtn = document.getElementById('generateTextBtn');
 const textInput = document.getElementById('textInput');
 const chunksToTrackInput = document.getElementById('chunksToTrack');
@@ -623,6 +625,11 @@ voiceSelect.addEventListener('change', () => {
 // Convert output format to Speech SDK format
 function convertOutputFormat(format) {
     const formatMap = {
+        'raw-8khz-16bit-mono-pcm': SpeechSDK.SpeechSynthesisOutputFormat.Raw8Khz16BitMonoPcm,
+        'raw-16khz-16bit-mono-pcm': SpeechSDK.SpeechSynthesisOutputFormat.Raw16Khz16BitMonoPcm,
+        'raw-22050hz-16bit-mono-pcm': SpeechSDK.SpeechSynthesisOutputFormat.Raw22050Hz16BitMonoPcm,
+        'raw-24khz-16bit-mono-pcm': SpeechSDK.SpeechSynthesisOutputFormat.Raw24Khz16BitMonoPcm,
+        'raw-48khz-16bit-mono-pcm': SpeechSDK.SpeechSynthesisOutputFormat.Raw48Khz16BitMonoPcm,
         'audio-16khz-32kbitrate-mono-mp3': SpeechSDK.SpeechSynthesisOutputFormat.Audio16Khz32KBitRateMonoMp3,
         'audio-16khz-64kbitrate-mono-mp3': SpeechSDK.SpeechSynthesisOutputFormat.Audio16Khz64KBitRateMonoMp3,
         'audio-16khz-128kbitrate-mono-mp3': SpeechSDK.SpeechSynthesisOutputFormat.Audio16Khz128KBitRateMonoMp3,
@@ -723,7 +730,10 @@ async function synthesizeSentence(config, voiceName, text, sentenceIndex, chunks
                         firstChunkTime: firstChunkTime,
                         firstByteTime: firstByteTime,
                         totalSize: result.audioData.byteLength,
-                        audioData: result.audioData // Save complete audio data
+                        audioData: result.audioData, // Save complete audio data
+                        turnId: result.resultId,
+                        requestId: result.resultId,
+                        responseRequestId: result.resultId
                     });
                 } else {
                     reject(new Error(`Synthesis failed: ${result.errorDetails}`));
@@ -737,6 +747,106 @@ async function synthesizeSentence(config, voiceName, text, sentenceIndex, chunks
     });
 }
 
+// Synthesize over the REST endpoint and track chunks from the streaming response body.
+async function synthesizeSentenceHttp(region, subscriptionKey, outputFormat, voiceName, text, sentenceIndex, chunksToTrack) {
+    const isSSML = text.trim().startsWith('<speak');
+    const ssml = isSSML ? text : `<speak version='1.0' xml:lang='en-US'><voice name='${voiceName}'>${text}</voice></speak>`;
+    const clientConnectionId = crypto.randomUUID();
+    const startTime = performance.now();
+    const response = await fetch(`https://${region}.tts.speech.microsoft.com/cognitiveservices/v1`, {
+        method: 'POST',
+        headers: {
+            'Ocp-Apim-Subscription-Key': subscriptionKey,
+            'Content-Type': 'application/ssml+xml',
+            'X-Microsoft-OutputFormat': outputFormat,
+            'X-ConnectionId': clientConnectionId
+        },
+        body: ssml
+    });
+
+    if (!response.ok) {
+        const errorDetails = await response.text();
+        throw new Error(`HTTP synthesis failed: ${response.status} ${response.statusText}${errorDetails ? ` - ${errorDetails}` : ''}`);
+    }
+
+    if (!response.body) {
+        throw new Error('HTTP synthesis response does not expose a streaming body');
+    }
+
+    const apimRequestId = response.headers.get('apim-request-id');
+    const responseRequestId = response.headers.get('X-RequestId');
+    // SynthesisStop uses the client connection ID as TurnId on the HTTP path.
+    const turnId = clientConnectionId;
+
+    const reader = response.body.getReader();
+    const chunks = [];
+    const audioParts = [];
+    let firstByteTime = null;
+    let cumulativeBytes = 0;
+    let lastChunkReceivedTime = null;
+    let lastChunkSize = null;
+
+    while (true) {
+        const { done, value } = await reader.read();
+        if (done) {
+            break;
+        }
+
+        const chunkReceivedTime = performance.now();
+        const timeFromStart = chunkReceivedTime - startTime;
+        const chunkSize = value.byteLength;
+        audioParts.push(value);
+        cumulativeBytes += chunkSize;
+
+        if (firstByteTime === null) {
+            firstByteTime = timeFromStart;
+        }
+
+        if (chunks.length < chunksToTrack) {
+            const interChunkDelay = lastChunkReceivedTime === null ? 0 : chunkReceivedTime - lastChunkReceivedTime;
+            const sizeChangePercent = lastChunkSize === null ? 0 : ((chunkSize - lastChunkSize) / lastChunkSize * 100);
+            chunks.push({
+                chunkNumber: chunks.length + 1,
+                length: chunkSize,
+                receivedTimeFromFirstByte: timeFromStart - firstByteTime,
+                completedTimeFromFirstByte: timeFromStart - firstByteTime,
+                timeOffset: timeFromStart,
+                interChunkDelay: interChunkDelay,
+                cumulativeBytes: cumulativeBytes,
+                sizeChangePercent: sizeChangePercent
+            });
+        }
+
+        lastChunkReceivedTime = chunkReceivedTime;
+        lastChunkSize = chunkSize;
+    }
+
+    const audioData = new Uint8Array(cumulativeBytes);
+    let offset = 0;
+    audioParts.forEach(part => {
+        audioData.set(part, offset);
+        offset += part.byteLength;
+    });
+
+    return {
+        sentenceIndex: sentenceIndex + 1,
+        text: text,
+        ssml: ssml,
+        isSSML: isSSML,
+        chunks: chunks,
+        totalTime: performance.now() - startTime,
+        firstChunkTime: firstByteTime,
+        firstByteTime: firstByteTime,
+        totalSize: cumulativeBytes,
+        audioData: audioData,
+        turnId: turnId,
+        requestId: responseRequestId || clientConnectionId,
+        clientConnectionId: clientConnectionId,
+        apimRequestId: apimRequestId,
+        responseRequestId: responseRequestId
+    };
+}
+
 // Start analysis
 // Start analysis
 async function startAnalysis() {
@@ -747,6 +857,7 @@ async function startAnalysis() {
     const customVoice = customVoiceInput.value.trim();
     const voice = (selectedVoice === 'custom' && customVoice) ? customVoice : selectedVoice;
     const language = languageSelect.value;
+    const protocol = protocolSelect.value;
     const outputFormat = outputFormatSelect.value;
     const chunksToTrack = parseInt(chunksToTrackInput.value);
     
@@ -766,7 +877,7 @@ async function startAnalysis() {
         log('Please fill in all required fields and select/enter a voice', 'error');
         return;
     }
-    
+
     if (texts.length === 0) {
         log('❌ Please enter or generate text to synthesize', 'error');
         return;
@@ -777,8 +888,22 @@ async function startAnalysis() {
     } else {
         log(`Using selected voice: ${voice}`, 'info');
     }
+
+    // Get synthesis repeat count
+    const synthesisRepeat = parseInt(synthesisRepeatInput?.value) || 1;
+
+    // Build the synthesis list by cycling through texts
+    const synthesisTexts = [];
+    const totalSyntheses = texts.length * synthesisRepeat;
+    for (let i = 0; i < totalSyntheses; i++) {
+        synthesisTexts.push({
+            text: texts[i % texts.length],
+            textIndex: i % texts.length,
+            repeatIndex: Math.floor(i / texts.length)
+        });
+    }
     
-    log(`Text Type: ${isSSML ? 'SSML' : 'Plain Text'}, Texts: ${texts.length}`, 'info');
+    log(`Text Type: ${isSSML ? 'SSML' : 'Plain Text'}, Texts: ${texts.length}, Repeat: ${synthesisRepeat}x, Total: ${synthesisTexts.length}`, 'info');
 
     try {
         startAnalysisBtn.disabled = true;
@@ -792,10 +917,13 @@ async function startAnalysis() {
             region: region,
             voice: voice,
             language: language,
+            protocol: protocol,
             outputFormat: outputFormat,
             textType: isSSML ? 'SSML' : 'Plain Text',
             chunksToTrack: chunksToTrack,
-            totalTexts: texts.length
+            totalTexts: texts.length,
+            synthesisRepeat: synthesisRepeat,
+            totalSyntheses: synthesisTexts.length
         };
         
         // Clear previous charts
@@ -803,25 +931,39 @@ async function startAnalysis() {
         charts = [];
 
         log('Starting analysis...', 'info');
-        log(`Configuration: Region=${region}, Voice=${voice}, Format=${outputFormat}, Texts=${texts.length}`, 'info');
+        log(`Configuration: Region=${region}, Voice=${voice}, Protocol=${protocol}, Format=${outputFormat}, Texts=${texts.length}, Repeat=${synthesisRepeat}x`, 'info');
 
-        const speechConfig = SpeechSDK.SpeechConfig.fromSubscription(subscriptionKey, region);
-        speechConfig.speechSynthesisOutputFormat = convertOutputFormat(outputFormat);
+        let speechConfig = null;
+        if (protocol === 'websocket') {
+            speechConfig = SpeechSDK.SpeechConfig.fromSubscription(subscriptionKey, region);
+            speechConfig.speechSynthesisOutputFormat = convertOutputFormat(outputFormat);
+        }
 
-        // Synthesize texts sequentially
-        for (let i = 0; i < texts.length; i++) {
-            const progress = ((i + 1) / texts.length) * 100;
+        // Synthesize texts sequentially (cycling through text list)
+        for (let i = 0; i < synthesisTexts.length; i++) {
+            const { text, textIndex, repeatIndex } = synthesisTexts[i];
+            const progress = ((i + 1) / synthesisTexts.length) * 100;
             progressFill.style.width = `${progress}%`;
-            progressText.textContent = `Processing text ${i + 1} of ${texts.length}...`;
+            progressText.textContent = `Processing synthesis ${i + 1} of ${synthesisTexts.length} (Text ${textIndex + 1}, Repeat ${repeatIndex + 1})...`;
 
-            log(`Synthesizing text ${i + 1}: "${texts[i].substring(0, 50)}..."`, 'info');
+            const textPreview = text.length > 50 ? text.substring(0, 50) + '...' : text;
+            log(`Synthesizing #${i + 1} (Text ${textIndex + 1}, Repeat ${repeatIndex + 1}): "${textPreview}"`, 'info');
 
             try {
-                const result = await synthesizeSentence(speechConfig, voice, texts[i], i, chunksToTrack);
+                const result = protocol === 'http'
+                    ? await synthesizeSentenceHttp(region, subscriptionKey, outputFormat, voice, text, i, chunksToTrack)
+                    : await synthesizeSentence(speechConfig, voice, text, i, chunksToTrack);
+                result.textIndex = textIndex;
+                result.repeatIndex = repeatIndex;
                 analysisData.push(result);
-                log(`Text ${i + 1} completed: ${result.chunks.length} chunks, ${result.totalTime.toFixed(2)}ms total`, 'success');
+                log(`Synthesis #${i + 1} completed: Turn ID=${result.turnId}, ${result.chunks.length} chunks, ${result.totalTime.toFixed(2)}ms total`, 'success');
+                if (protocol === 'http') {
+                    log(`HTTP IDs: X-RequestId=${result.responseRequestId || '<not exposed>'}, apim-request-id=${result.apimRequestId || '<not exposed>'}, X-ConnectionId=${result.clientConnectionId}`, 'info');
+                } else {
+                    log(`WebSocket SDK Result ID: ${result.requestId}`, 'info');
+                }
             } catch (error) {
-                log(`Error synthesizing text ${i + 1}: ${error.message}`, 'error');
+                log(`Error synthesizing #${i + 1}: ${error.message}`, 'error');
             }
         }
 
@@ -1385,7 +1527,13 @@ function createDetailedTable() {
     table.innerHTML = `
         <thead>
             <tr>
-                <th>Sentence</th>
+                <th>Synthesis #</th>
+                <th>Turn ID</th>
+                <th>Response / Result ID</th>
+                <th>APIM Request ID</th>
+                <th>X-ConnectionId</th>
+                <th>Text #</th>
+                <th>Repeat #</th>
                 <th>Chunk #</th>
                 <th>Size</th>
                 <th>Start Receive (ms)</th>
@@ -1405,8 +1553,14 @@ function createDetailedTable() {
             📊 Column Descriptions (Click to expand)
         </summary>
         <div style="margin-top: 10px; padding: 15px; background-color: #f8f9fa; border-radius: 5px; line-height: 1.8;">
-            <p style="margin: 8px 0;"><strong>Sentence:</strong> Which sentence this chunk belongs to</p>
-            <p style="margin: 8px 0;"><strong>Chunk #:</strong> The sequential number of the chunk within this sentence</p>
+            <p style="margin: 8px 0;"><strong>Synthesis #:</strong> The sequential synthesis index (1, 2, 3, ...)</p>
+            <p style="margin: 8px 0;"><strong>Turn ID:</strong> Best available identifier for finding this synthesis in the synthesis stop table.</p>
+            <p style="margin: 8px 0;"><strong>Response / Result ID:</strong> HTTP X-RequestId response header or WebSocket SDK resultId.</p>
+            <p style="margin: 8px 0;"><strong>APIM Request ID:</strong> HTTP apim-request-id response header, when exposed by CORS.</p>
+            <p style="margin: 8px 0;"><strong>X-ConnectionId:</strong> Client-generated HTTP correlation ID sent with the request.</p>
+            <p style="margin: 8px 0;"><strong>Text #:</strong> Which text this synthesis uses (cycles through available texts)</p>
+            <p style="margin: 8px 0;"><strong>Repeat #:</strong> Which repetition cycle this belongs to (1 = first pass, 2 = second pass, etc.)</p>
+            <p style="margin: 8px 0;"><strong>Chunk #:</strong> The sequential number of the chunk within this synthesis</p>
             <p style="margin: 8px 0;"><strong>Size:</strong> The size of this audio chunk in bytes</p>
             <p style="margin: 8px 0;"><strong>Start Receive (ms):</strong> Time from synthesis start when this chunk started being received. For the first chunk, this is when the first byte arrived.</p>
             <p style="margin: 8px 0;"><strong>Complete Receive (ms):</strong> Time from synthesis start when this chunk was fully received</p>
@@ -1437,8 +1591,16 @@ function createDetailedTable() {
         data.chunks.forEach(chunk => {
             const row = tbody.insertRow();
             const startReceiveTime = chunk.timeOffset - chunk.interChunkDelay;
+            const textIndex = (data.textIndex !== undefined) ? data.textIndex + 1 : data.sentenceIndex;
+            const repeatIndex = (data.repeatIndex !== undefined) ? data.repeatIndex + 1 : 1;
             row.innerHTML = `
-                <td>Sentence ${data.sentenceIndex}</td>
+                <td>${data.sentenceIndex}</td>
+                <td>${data.turnId || 'N/A'}</td>
+                <td>${data.responseRequestId || data.requestId || 'N/A'}</td>
+                <td>${data.apimRequestId || 'N/A'}</td>
+                <td>${data.clientConnectionId || 'N/A'}</td>
+                <td>${textIndex}</td>
+                <td>${repeatIndex}</td>
                 <td>${chunk.chunkNumber}</td>
                 <td>${formatBytes(chunk.length)}</td>
                 <td>${startReceiveTime.toFixed(2)}</td>
@@ -1490,7 +1652,12 @@ async function downloadFullDataReport() {
             firstByteTime: item.firstByteTime,
             firstChunkTime: item.firstChunkTime,
             totalSize: item.totalSize,
-            audioFileName: `audio_sentence_${item.sentenceIndex}.wav`,
+            turnId: item.turnId,
+            requestId: item.requestId,
+            clientConnectionId: item.clientConnectionId,
+            apimRequestId: item.apimRequestId,
+            responseRequestId: item.responseRequestId,
+            audioFileName: `audio_sentence_${item.sentenceIndex}.${getAudioFileExtension(analysisMetadata.outputFormat)}`,
             chunks: item.chunks.map(chunk => ({
                 chunkNumber: chunk.chunkNumber,
                 length: chunk.length,
@@ -1516,7 +1683,8 @@ async function downloadFullDataReport() {
     const audioFolder = zip.folder('audio');
     analysisData.forEach(item => {
         if (item.audioData) {
-            audioFolder.file(`audio_sentence_${item.sentenceIndex}.wav`, item.audioData);
+            const extension = getAudioFileExtension(analysisMetadata.outputFormat);
+            audioFolder.file(`audio_sentence_${item.sentenceIndex}.${extension}`, item.audioData);
         }
     });
     
@@ -1555,12 +1723,14 @@ async function downloadFullDataReport() {
 
 // Generate CSV data
 function generateCsvData() {
-    let csv = 'Sentence Index,Sentence Text,Chunk Number,Chunk Size (bytes),Start Receive (ms),Complete Receive (ms),Inter-Chunk Delay (ms),First Chunk Latency (ms),Total Time (ms),Total Size (bytes),Cumulative Bytes,Size Change %\n';
+    let csv = 'Synthesis Index,Turn ID,Response or Result ID,APIM Request ID,X-ConnectionId,Text Index,Repeat Index,Sentence Text,Chunk Number,Chunk Size (bytes),Start Receive (ms),Complete Receive (ms),Inter-Chunk Delay (ms),First Chunk Latency (ms),Total Time (ms),Total Size (bytes),Cumulative Bytes,Size Change %\n';
     
     analysisData.forEach(data => {
+        const textIndex = (data.textIndex !== undefined) ? data.textIndex + 1 : data.sentenceIndex;
+        const repeatIndex = (data.repeatIndex !== undefined) ? data.repeatIndex + 1 : 1;
         data.chunks.forEach(chunk => {
             const startReceiveTime = chunk.timeOffset - chunk.interChunkDelay;
-            csv += `${data.sentenceIndex},"${data.text.replace(/"/g, '""')}",${chunk.chunkNumber},${chunk.length},${startReceiveTime.toFixed(2)},${chunk.timeOffset.toFixed(2)},${chunk.interChunkDelay.toFixed(2)},${data.firstChunkTime.toFixed(2)},${data.totalTime.toFixed(2)},${data.totalSize},${chunk.cumulativeBytes},${chunk.sizeChangePercent.toFixed(2)}\n`;
+            csv += `${data.sentenceIndex},${data.turnId || ''},${data.responseRequestId || data.requestId || ''},${data.apimRequestId || ''},${data.clientConnectionId || ''},${textIndex},${repeatIndex},"${data.text.replace(/"/g, '""')}",${chunk.chunkNumber},${chunk.length},${startReceiveTime.toFixed(2)},${chunk.timeOffset.toFixed(2)},${chunk.interChunkDelay.toFixed(2)},${data.firstChunkTime.toFixed(2)},${data.totalTime.toFixed(2)},${data.totalSize},${chunk.cumulativeBytes},${chunk.sizeChangePercent.toFixed(2)}\n`;
         });
     });
     
@@ -1756,6 +1926,13 @@ function formatBytes(bytes) {
     const sizes = ['Bytes', 'KB', 'MB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+}
+
+function getAudioFileExtension(outputFormat) {
+    if (outputFormat.startsWith('raw-')) return 'raw';
+    if (outputFormat.includes('mp3')) return 'mp3';
+    if (outputFormat.startsWith('webm-')) return 'webm';
+    return 'wav';
 }
 
 function getColor(index, alpha = 1) {
