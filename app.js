@@ -662,6 +662,11 @@ function buildSingleVoiceSsml(text, voiceName) {
     return `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="http://www.w3.org/2001/mstts" xml:lang="en-US"><voice name="${escapeXml(voiceName)}">${escapeXml(text)}</voice></speak>`;
 }
 
+function formatBeijingTime(epochMilliseconds) {
+    const utcParts = new Date(epochMilliseconds + (8 * 60 * 60 * 1000)).toISOString().replace('Z', '');
+    return `${utcParts}+08:00`;
+}
+
 // Synthesize single sentence and track chunks
 async function synthesizeSentence(config, voiceName, text, sentenceIndex, chunksToTrack) {
     return new Promise((resolve, reject) => {
@@ -682,6 +687,7 @@ async function synthesizeSentence(config, voiceName, text, sentenceIndex, chunks
         
         synthesizer.synthesizing = (s, e) => {
             const chunkReceivedTime = performance.now();
+            const chunkReceivedEpochMilliseconds = Date.now();
             const timeFromStart = chunkReceivedTime - startTime;
             
             // Record first byte time
@@ -712,6 +718,9 @@ async function synthesizeSentence(config, voiceName, text, sentenceIndex, chunks
                     receivedTimeFromFirstByte: firstByteTime === null ? 0 : timeFromStart - firstByteTime, // Time from first byte to receiving this chunk
                     completedTimeFromFirstByte: timeFromStart - firstByteTime, // Time from first byte to completing this chunk (same as received for streaming)
                     timeOffset: timeFromStart, // Total time from synthesis start
+                    receivedAtEpochMilliseconds: chunkReceivedEpochMilliseconds,
+                    receivedAtUtc: new Date(chunkReceivedEpochMilliseconds).toISOString(),
+                    receivedAtBeijing: formatBeijingTime(chunkReceivedEpochMilliseconds),
                     
                     // New metrics
                     interChunkDelay: interChunkDelay, // Time between this chunk and previous chunk
@@ -807,6 +816,7 @@ async function synthesizeSentenceHttp(region, subscriptionKey, outputFormat, voi
         }
 
         const chunkReceivedTime = performance.now();
+        const chunkReceivedEpochMilliseconds = Date.now();
         const timeFromStart = chunkReceivedTime - startTime;
         const chunkSize = value.byteLength;
         audioParts.push(value);
@@ -825,6 +835,9 @@ async function synthesizeSentenceHttp(region, subscriptionKey, outputFormat, voi
                 receivedTimeFromFirstByte: timeFromStart - firstByteTime,
                 completedTimeFromFirstByte: timeFromStart - firstByteTime,
                 timeOffset: timeFromStart,
+                receivedAtEpochMilliseconds: chunkReceivedEpochMilliseconds,
+                receivedAtUtc: new Date(chunkReceivedEpochMilliseconds).toISOString(),
+                receivedAtBeijing: formatBeijingTime(chunkReceivedEpochMilliseconds),
                 interChunkDelay: interChunkDelay,
                 cumulativeBytes: cumulativeBytes,
                 sizeChangePercent: sizeChangePercent
@@ -1550,6 +1563,8 @@ function createDetailedTable() {
                 <th>Repeat #</th>
                 <th>Chunk #</th>
                 <th>Size</th>
+                <th>Received UTC</th>
+                <th>Received Beijing (UTC+8)</th>
                 <th>Start Receive (ms)</th>
                 <th>Complete Receive (ms)</th>
                 <th>Inter-Chunk Delay (ms)</th>
@@ -1576,6 +1591,8 @@ function createDetailedTable() {
             <p style="margin: 8px 0;"><strong>Repeat #:</strong> Which repetition cycle this belongs to (1 = first pass, 2 = second pass, etc.)</p>
             <p style="margin: 8px 0;"><strong>Chunk #:</strong> The sequential number of the chunk within this synthesis</p>
             <p style="margin: 8px 0;"><strong>Size:</strong> The size of this audio chunk in bytes</p>
+            <p style="margin: 8px 0;"><strong>Received UTC:</strong> Client-side wall-clock time when this chunk was received, formatted as UTC with millisecond precision.</p>
+            <p style="margin: 8px 0;"><strong>Received Beijing:</strong> The same receipt instant formatted as UTC+8 with millisecond precision.</p>
             <p style="margin: 8px 0;"><strong>Start Receive (ms):</strong> Time from synthesis start when this chunk started being received. For the first chunk, this is when the first byte arrived.</p>
             <p style="margin: 8px 0;"><strong>Complete Receive (ms):</strong> Time from synthesis start when this chunk was fully received</p>
             <p style="margin: 8px 0;"><strong>Inter-Chunk Delay (ms):</strong> Time interval between receiving the previous chunk and this chunk. For the first chunk, this is 0. Helps identify delays or jitter in chunk delivery.</p>
@@ -1617,6 +1634,8 @@ function createDetailedTable() {
                 <td>${repeatIndex}</td>
                 <td>${chunk.chunkNumber}</td>
                 <td>${formatBytes(chunk.length)}</td>
+                <td>${chunk.receivedAtUtc || 'N/A'}</td>
+                <td>${chunk.receivedAtBeijing || 'N/A'}</td>
                 <td>${startReceiveTime.toFixed(2)}</td>
                 <td>${chunk.timeOffset.toFixed(2)}</td>
                 <td>${chunk.interChunkDelay.toFixed(2)}</td>
@@ -1678,6 +1697,9 @@ async function downloadFullDataReport() {
                 receivedTimeFromFirstByte: chunk.receivedTimeFromFirstByte,
                 completedTimeFromFirstByte: chunk.completedTimeFromFirstByte,
                 timeOffset: chunk.timeOffset,
+                receivedAtEpochMilliseconds: chunk.receivedAtEpochMilliseconds,
+                receivedAtUtc: chunk.receivedAtUtc,
+                receivedAtBeijing: chunk.receivedAtBeijing,
                 // Additional metrics
                 interChunkDelay: chunk.interChunkDelay,
                 cumulativeBytes: chunk.cumulativeBytes,
@@ -1737,14 +1759,14 @@ async function downloadFullDataReport() {
 
 // Generate CSV data
 function generateCsvData() {
-    let csv = 'Synthesis Index,Turn ID,Response or Result ID,APIM Request ID,X-ConnectionId,Text Index,Repeat Index,Sentence Text,Chunk Number,Chunk Size (bytes),Start Receive (ms),Complete Receive (ms),Inter-Chunk Delay (ms),First Chunk Latency (ms),Total Time (ms),Total Size (bytes),Cumulative Bytes,Size Change %\n';
+    let csv = 'Synthesis Index,Turn ID,Response or Result ID,APIM Request ID,X-ConnectionId,Text Index,Repeat Index,Sentence Text,Chunk Number,Chunk Size (bytes),Received Epoch (ms),Received UTC,Received Beijing (UTC+8),Start Receive (ms),Complete Receive (ms),Inter-Chunk Delay (ms),First Chunk Latency (ms),Total Time (ms),Total Size (bytes),Cumulative Bytes,Size Change %\n';
     
     analysisData.forEach(data => {
         const textIndex = (data.textIndex !== undefined) ? data.textIndex + 1 : data.sentenceIndex;
         const repeatIndex = (data.repeatIndex !== undefined) ? data.repeatIndex + 1 : 1;
         data.chunks.forEach(chunk => {
             const startReceiveTime = chunk.timeOffset - chunk.interChunkDelay;
-            csv += `${data.sentenceIndex},${data.turnId || ''},${data.responseRequestId || data.requestId || ''},${data.apimRequestId || ''},${data.clientConnectionId || ''},${textIndex},${repeatIndex},"${data.text.replace(/"/g, '""')}",${chunk.chunkNumber},${chunk.length},${startReceiveTime.toFixed(2)},${chunk.timeOffset.toFixed(2)},${chunk.interChunkDelay.toFixed(2)},${data.firstChunkTime.toFixed(2)},${data.totalTime.toFixed(2)},${data.totalSize},${chunk.cumulativeBytes},${chunk.sizeChangePercent.toFixed(2)}\n`;
+            csv += `${data.sentenceIndex},${data.turnId || ''},${data.responseRequestId || data.requestId || ''},${data.apimRequestId || ''},${data.clientConnectionId || ''},${textIndex},${repeatIndex},"${data.text.replace(/"/g, '""')}",${chunk.chunkNumber},${chunk.length},${chunk.receivedAtEpochMilliseconds || ''},${chunk.receivedAtUtc || ''},${chunk.receivedAtBeijing || ''},${startReceiveTime.toFixed(2)},${chunk.timeOffset.toFixed(2)},${chunk.interChunkDelay.toFixed(2)},${data.firstChunkTime.toFixed(2)},${data.totalTime.toFixed(2)},${data.totalSize},${chunk.cumulativeBytes},${chunk.sizeChangePercent.toFixed(2)}\n`;
         });
     });
     
