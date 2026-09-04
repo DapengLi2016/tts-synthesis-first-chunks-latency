@@ -50,6 +50,7 @@ const translations = {
         voice: "Voice:",
         customVoice: "Custom Voice Name:",
         customVoicePlaceholder: "Enter custom voice name (e.g., YourCustomVoiceName)",
+        protocol: "Protocol:",
         outputFormat: "Output Format:",
         chunksToTrack: "Number of Chunks to Track:",
         textType: "Text Type:",
@@ -648,6 +649,19 @@ function convertOutputFormat(format) {
     return formatMap[format] || SpeechSDK.SpeechSynthesisOutputFormat.Riff24Khz16BitMonoPcm;
 }
 
+function escapeXml(text) {
+    return text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&apos;');
+}
+
+function buildSingleVoiceSsml(text, voiceName) {
+    return `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="http://www.w3.org/2001/mstts" xml:lang="en-US"><voice name="${escapeXml(voiceName)}">${escapeXml(text)}</voice></speak>`;
+}
+
 // Synthesize single sentence and track chunks
 async function synthesizeSentence(config, voiceName, text, sentenceIndex, chunksToTrack) {
     return new Promise((resolve, reject) => {
@@ -656,7 +670,7 @@ async function synthesizeSentence(config, voiceName, text, sentenceIndex, chunks
         
         // Check if text is already SSML (starts with <speak>)
         const isSSML = text.trim().startsWith('<speak');
-        const ssml = isSSML ? text : `<speak version='1.0' xml:lang='en-US'><voice name='${voiceName}'>${text}</voice></speak>`;
+        const ssml = isSSML ? text : buildSingleVoiceSsml(text, voiceName);
         
         const chunks = [];
         const startTime = performance.now();

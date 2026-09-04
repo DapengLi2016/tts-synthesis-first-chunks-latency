@@ -61,7 +61,7 @@ This tool helps AACS (Azure AI Content Safety) team analyze the timing and size 
 4. **Select Output Format**
    - Choose from available formats:
      - MP3 formats (16kHz, 24kHz, 48kHz with various bitrates)
-   - Raw PCM formats (8kHz, 16kHz, 22.05kHz, 24kHz, 48kHz)
+     - Raw PCM formats (8kHz, 16kHz, 22.05kHz, 24kHz, 48kHz)
      - PCM formats (16kHz, 24kHz, 48kHz)
      - WebM Opus formats (16kHz, 24kHz)
 
