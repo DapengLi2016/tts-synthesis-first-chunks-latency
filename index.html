@@ -169,13 +169,18 @@
             </div>
 
             <div class="form-group">
+                <label for="protocol" data-i18n="protocol">Protocol:</label>
+                <select id="protocol">
+                    <option value="websocket">WebSocket (Speech SDK)</option>
+                    <option value="http">HTTP streaming</option>
+                </select>
+            </div>
+
+            <div class="form-group">
                 <label for="outputFormat" data-i18n="outputFormat">Output Format:</label>
                 <select id="outputFormat">
-<<<<<<< Updated upstream
-=======
                     <option value="raw-16khz-16bit-mono-pcm">RAW 16kHz 16bit Mono PCM</option>
                     <option value="raw-24khz-16bit-mono-pcm">RAW 24kHz 16bit Mono PCM</option>
->>>>>>> Stashed changes
                     <option value="audio-16khz-32kbitrate-mono-mp3">Audio 16kHz 32kbps Mono MP3</option>
                     <option value="audio-16khz-64kbitrate-mono-mp3">Audio 16kHz 64kbps Mono MP3</option>
                     <option value="audio-16khz-128kbitrate-mono-mp3">Audio 16kHz 128kbps Mono MP3</option>

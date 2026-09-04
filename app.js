@@ -50,6 +50,7 @@ const translations = {
         voice: "Voice:",
         customVoice: "Custom Voice Name:",
         customVoicePlaceholder: "Enter custom voice name (e.g., YourCustomVoiceName)",
+        protocol: "Protocol:",
         outputFormat: "Output Format:",
         chunksToTrack: "Number of Chunks to Track:",
         textType: "Text Type:",
@@ -352,6 +353,7 @@ const languageSelect = document.getElementById('language');
 const voiceSelect = document.getElementById('voice');
 const customVoiceInput = document.getElementById('customVoice');
 const customVoiceContainer = document.getElementById('customVoiceContainer');
+const protocolSelect = document.getElementById('protocol');
 const outputFormatSelect = document.getElementById('outputFormat');
 const textTypePlain = document.getElementById('textTypePlain');
 const textTypeSSML = document.getElementById('textTypeSSML');
@@ -623,11 +625,8 @@ voiceSelect.addEventListener('change', () => {
 // Convert output format to Speech SDK format
 function convertOutputFormat(format) {
     const formatMap = {
-<<<<<<< Updated upstream
-=======
         'raw-16khz-16bit-mono-pcm': SpeechSDK.SpeechSynthesisOutputFormat.Raw16Khz16BitMonoPcm,
         'raw-24khz-16bit-mono-pcm': SpeechSDK.SpeechSynthesisOutputFormat.Raw24Khz16BitMonoPcm,
->>>>>>> Stashed changes
         'audio-16khz-32kbitrate-mono-mp3': SpeechSDK.SpeechSynthesisOutputFormat.Audio16Khz32KBitRateMonoMp3,
         'audio-16khz-64kbitrate-mono-mp3': SpeechSDK.SpeechSynthesisOutputFormat.Audio16Khz64KBitRateMonoMp3,
         'audio-16khz-128kbitrate-mono-mp3': SpeechSDK.SpeechSynthesisOutputFormat.Audio16Khz128KBitRateMonoMp3,
@@ -646,6 +645,19 @@ function convertOutputFormat(format) {
     return formatMap[format] || SpeechSDK.SpeechSynthesisOutputFormat.Riff24Khz16BitMonoPcm;
 }
 
+function escapeXml(text) {
+    return text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&apos;');
+}
+
+function buildSingleVoiceSsml(text, voiceName) {
+    return `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="http://www.w3.org/2001/mstts" xml:lang="en-US"><voice name="${escapeXml(voiceName)}">${escapeXml(text)}</voice></speak>`;
+}
+
 // Synthesize single sentence and track chunks
 async function synthesizeSentence(config, voiceName, text, sentenceIndex, chunksToTrack) {
     return new Promise((resolve, reject) => {
@@ -654,7 +666,7 @@ async function synthesizeSentence(config, voiceName, text, sentenceIndex, chunks
         
         // Check if text is already SSML (starts with <speak>)
         const isSSML = text.trim().startsWith('<speak');
-        const ssml = isSSML ? text : `<speak version='1.0' xml:lang='en-US'><voice name='${voiceName}'>${text}</voice></speak>`;
+        const ssml = isSSML ? text : buildSingleVoiceSsml(text, voiceName);
         
         const chunks = [];
         const startTime = performance.now();
@@ -728,7 +740,10 @@ async function synthesizeSentence(config, voiceName, text, sentenceIndex, chunks
                         firstChunkTime: firstChunkTime,
                         firstByteTime: firstByteTime,
                         totalSize: result.audioData.byteLength,
-                        audioData: result.audioData // Save complete audio data
+                        audioData: result.audioData, // Save complete audio data
+                        turnId: result.resultId,
+                        requestId: result.resultId,
+                        responseRequestId: result.resultId
                     });
                 } else {
                     reject(new Error(`Synthesis failed: ${result.errorDetails}`));
@@ -742,19 +757,17 @@ async function synthesizeSentence(config, voiceName, text, sentenceIndex, chunks
     });
 }
 
-<<<<<<< Updated upstream
-=======
 // Synthesize over the REST endpoint and track chunks from the streaming response body.
 async function synthesizeSentenceHttp(region, subscriptionKey, outputFormat, voiceName, text, sentenceIndex, chunksToTrack) {
     const isSSML = text.trim().startsWith('<speak');
-    const ssml = isSSML ? text : `<speak version='1.0' xml:lang='en-US'><voice name='${voiceName}'>${text}</voice></speak>`;
+    const ssml = isSSML ? text : buildSingleVoiceSsml(text, voiceName);
     const clientConnectionId = crypto.randomUUID();
     const startTime = performance.now();
     const response = await fetch(`https://${region}.tts.speech.microsoft.com/cognitiveservices/v1`, {
         method: 'POST',
         headers: {
             'Ocp-Apim-Subscription-Key': subscriptionKey,
-            'Content-Type': 'application/ssml+xml',
+            'Content-Type': 'application/ssml+xml; charset=utf-8',
             'X-Microsoft-OutputFormat': outputFormat,
             'X-ConnectionId': clientConnectionId
         },
@@ -848,8 +861,6 @@ async function synthesizeSentenceHttp(region, subscriptionKey, outputFormat, voi
         responseRequestId: responseRequestId
     };
 }
-
->>>>>>> Stashed changes
 // Start analysis
 // Start analysis
 async function startAnalysis() {
@@ -860,6 +871,7 @@ async function startAnalysis() {
     const customVoice = customVoiceInput.value.trim();
     const voice = (selectedVoice === 'custom' && customVoice) ? customVoice : selectedVoice;
     const language = languageSelect.value;
+    const protocol = protocolSelect.value;
     const outputFormat = outputFormatSelect.value;
     const chunksToTrack = parseInt(chunksToTrackInput.value);
     
@@ -905,6 +917,7 @@ async function startAnalysis() {
             region: region,
             voice: voice,
             language: language,
+            protocol: protocol,
             outputFormat: outputFormat,
             textType: isSSML ? 'SSML' : 'Plain Text',
             chunksToTrack: chunksToTrack,
@@ -916,10 +929,13 @@ async function startAnalysis() {
         charts = [];
 
         log('Starting analysis...', 'info');
-        log(`Configuration: Region=${region}, Voice=${voice}, Format=${outputFormat}, Texts=${texts.length}`, 'info');
+        log(`Configuration: Region=${region}, Voice=${voice}, Protocol=${protocol}, Format=${outputFormat}, Texts=${texts.length}`, 'info');
 
-        const speechConfig = SpeechSDK.SpeechConfig.fromSubscription(subscriptionKey, region);
-        speechConfig.speechSynthesisOutputFormat = convertOutputFormat(outputFormat);
+        let speechConfig = null;
+        if (protocol === 'websocket') {
+            speechConfig = SpeechSDK.SpeechConfig.fromSubscription(subscriptionKey, region);
+            speechConfig.speechSynthesisOutputFormat = convertOutputFormat(outputFormat);
+        }
 
         // Synthesize texts sequentially
         for (let i = 0; i < texts.length; i++) {
@@ -930,9 +946,14 @@ async function startAnalysis() {
             log(`Synthesizing text ${i + 1}: "${texts[i].substring(0, 50)}..."`, 'info');
 
             try {
-                const result = await synthesizeSentence(speechConfig, voice, texts[i], i, chunksToTrack);
+                const result = protocol === 'http'
+                    ? await synthesizeSentenceHttp(region, subscriptionKey, outputFormat, voice, texts[i], i, chunksToTrack)
+                    : await synthesizeSentence(speechConfig, voice, texts[i], i, chunksToTrack);
                 analysisData.push(result);
-                log(`Text ${i + 1} completed: ${result.chunks.length} chunks, ${result.totalTime.toFixed(2)}ms total`, 'success');
+                log(`Text ${i + 1} completed: Turn ID=${result.turnId}, ${result.chunks.length} chunks, ${result.totalTime.toFixed(2)}ms total`, 'success');
+                if (protocol === 'http') {
+                    log(`HTTP IDs: X-RequestId=${result.responseRequestId || '<not exposed>'}, apim-request-id=${result.apimRequestId || '<not exposed>'}, X-ConnectionId=${result.clientConnectionId}`, 'info');
+                }
             } catch (error) {
                 log(`Error synthesizing text ${i + 1}: ${error.message}`, 'error');
             }
