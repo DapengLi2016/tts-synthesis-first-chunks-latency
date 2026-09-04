@@ -78,8 +78,21 @@
             </div>
 
             <div class="form-group">
+                <label for="protocol">Protocol:</label>
+                <select id="protocol">
+                    <option value="websocket" selected>WebSocket (Speech SDK)</option>
+                    <option value="http">HTTP streaming</option>
+                </select>
+            </div>
+
+            <div class="form-group">
                 <label for="outputFormat">Output Format:</label>
                 <select id="outputFormat">
+                    <option value="raw-8khz-16bit-mono-pcm">RAW 8kHz 16bit Mono PCM</option>
+                    <option value="raw-16khz-16bit-mono-pcm">RAW 16kHz 16bit Mono PCM</option>
+                    <option value="raw-22050hz-16bit-mono-pcm">RAW 22.05kHz 16bit Mono PCM</option>
+                    <option value="raw-24khz-16bit-mono-pcm">RAW 24kHz 16bit Mono PCM</option>
+                    <option value="raw-48khz-16bit-mono-pcm">RAW 48kHz 16bit Mono PCM</option>
                     <option value="audio-16khz-32kbitrate-mono-mp3">Audio 16kHz 32kbps Mono MP3</option>
                     <option value="audio-16khz-64kbitrate-mono-mp3">Audio 16kHz 64kbps Mono MP3</option>
                     <option value="audio-16khz-128kbitrate-mono-mp3">Audio 16kHz 128kbps Mono MP3</option>
@@ -111,6 +124,10 @@
                     <label style="display: flex; align-items: center; gap: 5px; font-weight: normal;">
                         <span>Number:</span>
                         <input type="number" id="sampleCount" value="10" min="1" max="40" style="width: 60px; margin: 0 5px;">
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 5px; font-weight: normal;">
+                        <span>Repeat:</span>
+                        <input type="number" id="synthesisRepeat" value="1" min="1" max="100" style="width: 60px; margin: 0 5px;" title="Number of synthesis repetitions (cycles through texts)">
                     </label>
                 </div>
             </div>
