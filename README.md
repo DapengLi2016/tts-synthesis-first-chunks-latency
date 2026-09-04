@@ -15,7 +15,9 @@ This tool helps AACS (Azure AI Content Safety) team analyze the timing and size 
 ## Features
 
 - 🎯 **Voice Selection**: Browse and select from all available Azure TTS voices by language
-- 🎵 **Output Format Selection**: Choose from 13 different audio output formats
+- 🔌 **Protocol Selection**: Compare WebSocket Speech SDK synthesis with HTTP streaming synthesis
+- 🔎 **Turn ID Correlation**: Display and export the request identifier used to search service logs
+- 🎵 **Output Format Selection**: Choose from MP3, RIFF PCM, raw PCM, and WebM Opus formats
 - 📊 **Real-time Analysis**: Sequential synthesis with chunk-level tracking
 - 📈 **Visual Charts**: Interactive charts showing chunk sizes, latencies, and trends
 - 📥 **Export Options**: 
@@ -46,6 +48,8 @@ This tool helps AACS (Azure AI Content Safety) team analyze the timing and size 
 2. **Configure Settings**
    - **Region**: Enter your Azure region (e.g., `eastus`, `westus2`)
    - **Subscription Key**: Enter your Azure Speech Service subscription key
+   - **Protocol**: Select WebSocket (Speech SDK) or HTTP streaming
+   - **Turn ID**: Use the SDK result ID for WebSocket or `X-ConnectionId` for HTTP to query the synthesis stop table
    - **Number of Sentences**: Set how many sentences to synthesize (default: 10)
    - **Chunks to Track**: Set how many chunks to track per sentence (default: 10)
 
@@ -57,7 +61,7 @@ This tool helps AACS (Azure AI Content Safety) team analyze the timing and size 
 4. **Select Output Format**
    - Choose from available formats:
      - MP3 formats (16kHz, 24kHz, 48kHz with various bitrates)
-      - Raw PCM formats (16kHz, 24kHz)
+     - Raw PCM formats (8kHz, 16kHz, 22.05kHz, 24kHz, 48kHz)
      - PCM formats (16kHz, 24kHz, 48kHz)
      - WebM Opus formats (16kHz, 24kHz)
 
